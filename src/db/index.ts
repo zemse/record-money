@@ -72,3 +72,31 @@ export async function initializeSettings(): Promise<void> {
     })
   }
 }
+
+// Add a new user
+export async function addUser(
+  email: string,
+  alias: string
+): Promise<{ success: true; email: string } | { success: false; error: string }> {
+  const normalizedEmail = normalizeEmail(email)
+
+  if (!normalizedEmail) {
+    return { success: false, error: 'Email is required' }
+  }
+
+  if (!alias.trim()) {
+    return { success: false, error: 'Name is required' }
+  }
+
+  const existing = await db.users.get(normalizedEmail)
+  if (existing) {
+    return { success: false, error: 'User with this email already exists' }
+  }
+
+  await db.users.add({
+    email: normalizedEmail,
+    alias: alias.trim(),
+  })
+
+  return { success: true, email: normalizedEmail }
+}

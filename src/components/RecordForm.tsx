@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ExpenseRecord, User, Group, ShareType, Participant } from '../types'
 import { UserPicker } from './UserPicker'
+import { addUser } from '../db'
 
 // Common currencies
 const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'SGD', 'AED', 'THB']
@@ -46,6 +47,11 @@ export function RecordForm({ initialData, users, groups, onSubmit, onCancel }: R
   const handleCategorySelect = (cat: { name: string; icon: string }) => {
     setCategory(cat.name)
     setIcon(cat.icon)
+  }
+
+  const handleAddUser = async (email: string, alias: string) => {
+    const result = await addUser(email, alias)
+    return { success: result.success, error: result.success ? undefined : result.error }
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -210,6 +216,7 @@ export function RecordForm({ initialData, users, groups, onSubmit, onCancel }: R
           onChange={setPaidByEmails}
           multiple
           placeholder="Select who paid..."
+          onAddUser={handleAddUser}
         />
       </div>
 
@@ -221,6 +228,7 @@ export function RecordForm({ initialData, users, groups, onSubmit, onCancel }: R
           onChange={setPaidForEmails}
           multiple
           placeholder="Select who this is for..."
+          onAddUser={handleAddUser}
         />
       </div>
 
