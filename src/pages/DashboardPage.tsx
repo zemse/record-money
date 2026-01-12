@@ -1,21 +1,53 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link } from 'react-router-dom'
 import { db, generateUUID, now, getCurrentDate, getCurrentTime } from '../db'
 import { DEFAULT_GROUP_UUID } from '../types'
+import type { ExchangeRates } from '../types'
 import {
   calculateUserBalances,
   calculateBalancesByGroup,
   formatAmount,
 } from '../utils/balanceCalculator'
+import { getExchangeRates, convertAmount, getRatesAge } from '../utils/currencyConverter'
 
 export function DashboardPage() {
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null)
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(null)
+  const [ratesLoading, setRatesLoading] = useState(false)
+  const [ratesError, setRatesError] = useState<string | null>(null)
 
   const settings = useLiveQuery(() => db.settings.get('main'))
   const users = useLiveQuery(() => db.users.toArray())
   const groups = useLiveQuery(() => db.groups.toArray())
   const records = useLiveQuery(() => db.records.toArray())
+
+  // Fetch exchange rates on mount and when needed
+  const fetchRates = useCallback(async (force = false) => {
+    setRatesLoading(true)
+    setRatesError(null)
+    try {
+      const rates = await getExchangeRates(force)
+      setExchangeRates(rates)
+    } catch {
+      setRatesError('Failed to fetch exchange rates')
+    } finally {
+      setRatesLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchRates()
+  }, [fetchRates])
+
+  // Helper to convert and format amount to display currency
+  const convertToDisplayCurrency = useCallback(
+    (amount: number, fromCurrency: string, toCurrency: string): number => {
+      if (!exchangeRates || fromCurrency === toCurrency) return amount
+      return convertAmount(amount, fromCurrency, toCurrency, exchangeRates)
+    },
+    [exchangeRates]
+  )
 
   const currentUserEmail = settings?.currentUserEmail
   const currentUser = users?.find((u) => u.email === currentUserEmail)
@@ -119,11 +151,27 @@ export function DashboardPage() {
   const overallBalance = calculateUserBalances(allRecords, currentUserEmail)
   const balancesByGroup = calculateBalancesByGroup(allRecords, currentUserEmail)
 
-  const totalOwed = overallBalance.owedBy.reduce((sum, d) => sum + d.amount, 0)
-  const totalOwes = overallBalance.owes.reduce((sum, d) => sum + d.amount, 0)
-
   // Get display currency (fallback to INR)
   const displayCurrency = settings?.defaultDisplayCurrency || 'INR'
+
+  // Calculate totals converted to display currency
+  const totalOwed = overallBalance.owedBy.reduce(
+    (sum, d) => sum + convertToDisplayCurrency(d.amount, d.currency, displayCurrency),
+    0
+  )
+  const totalOwes = overallBalance.owes.reduce(
+    (sum, d) => sum + convertToDisplayCurrency(d.amount, d.currency, displayCurrency),
+    0
+  )
+  const netBalance = totalOwed - totalOwes
+
+  // Check if we have mixed currencies (need conversion)
+  const allCurrencies = new Set([
+    ...overallBalance.owedBy.map((d) => d.currency),
+    ...overallBalance.owes.map((d) => d.currency),
+  ])
+  const hasMixedCurrencies =
+    allCurrencies.size > 1 || (allCurrencies.size === 1 && !allCurrencies.has(displayCurrency))
 
   return (
     <div className="space-y-6">
@@ -134,7 +182,28 @@ export function DashboardPage() {
 
       {/* Overall Summary Card */}
       <div className="rounded-2xl border border-border-default bg-surface p-6">
-        <h2 className="text-lg font-semibold text-content">Overall Balance</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-content">Overall Balance</h2>
+          {/* Exchange rate info */}
+          {hasMixedCurrencies && (
+            <div className="flex items-center gap-2 text-xs text-content-tertiary">
+              {exchangeRates && <span>Rates: {getRatesAge(exchangeRates.fetchedAt)}</span>}
+              <button
+                onClick={() => fetchRates(true)}
+                disabled={ratesLoading}
+                className="rounded-lg bg-surface-tertiary px-2 py-1 text-xs font-medium text-content-secondary transition-colors hover:bg-surface-hover disabled:opacity-50"
+              >
+                {ratesLoading ? '...' : '↻'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {ratesError && hasMixedCurrencies && (
+          <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+            {ratesError}. Showing unconverted values.
+          </p>
+        )}
 
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           {/* You are owed */}
@@ -143,6 +212,9 @@ export function DashboardPage() {
             <p className="mt-1 text-2xl font-bold text-green-600 dark:text-green-400">
               {formatAmount(totalOwed, displayCurrency)}
             </p>
+            {hasMixedCurrencies && exchangeRates && (
+              <p className="mt-1 text-xs text-green-600/70 dark:text-green-400/70">converted</p>
+            )}
           </div>
 
           {/* You owe */}
@@ -151,19 +223,20 @@ export function DashboardPage() {
             <p className="mt-1 text-2xl font-bold text-red-600 dark:text-red-400">
               {formatAmount(totalOwes, displayCurrency)}
             </p>
+            {hasMixedCurrencies && exchangeRates && (
+              <p className="mt-1 text-xs text-red-600/70 dark:text-red-400/70">converted</p>
+            )}
           </div>
 
           {/* Net Balance */}
           <div
             className={`rounded-xl p-4 ${
-              overallBalance.netBalance >= 0
-                ? 'bg-green-50 dark:bg-green-500/10'
-                : 'bg-red-50 dark:bg-red-500/10'
+              netBalance >= 0 ? 'bg-green-50 dark:bg-green-500/10' : 'bg-red-50 dark:bg-red-500/10'
             }`}
           >
             <p
               className={`text-sm ${
-                overallBalance.netBalance >= 0
+                netBalance >= 0
                   ? 'text-green-700 dark:text-green-400'
                   : 'text-red-700 dark:text-red-400'
               }`}
@@ -172,14 +245,25 @@ export function DashboardPage() {
             </p>
             <p
               className={`mt-1 text-2xl font-bold ${
-                overallBalance.netBalance >= 0
+                netBalance >= 0
                   ? 'text-green-600 dark:text-green-400'
                   : 'text-red-600 dark:text-red-400'
               }`}
             >
-              {overallBalance.netBalance >= 0 ? '+' : ''}
-              {formatAmount(overallBalance.netBalance, displayCurrency)}
+              {netBalance >= 0 ? '+' : ''}
+              {formatAmount(netBalance, displayCurrency)}
             </p>
+            {hasMixedCurrencies && exchangeRates && (
+              <p
+                className={`mt-1 text-xs ${
+                  netBalance >= 0
+                    ? 'text-green-600/70 dark:text-green-400/70'
+                    : 'text-red-600/70 dark:text-red-400/70'
+                }`}
+              >
+                converted
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -274,8 +358,15 @@ export function DashboardPage() {
               const groupBalance = balancesByGroup.get(group.uuid)
               if (!groupBalance) return null
 
-              const groupOwed = groupBalance.owedBy.reduce((sum, d) => sum + d.amount, 0)
-              const groupOwes = groupBalance.owes.reduce((sum, d) => sum + d.amount, 0)
+              // Convert group balances to display currency
+              const groupOwed = groupBalance.owedBy.reduce(
+                (sum, d) => sum + convertToDisplayCurrency(d.amount, d.currency, displayCurrency),
+                0
+              )
+              const groupOwes = groupBalance.owes.reduce(
+                (sum, d) => sum + convertToDisplayCurrency(d.amount, d.currency, displayCurrency),
+                0
+              )
               const groupNet = groupOwed - groupOwes
 
               const isExpanded = expandedGroup === group.uuid

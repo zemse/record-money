@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { ExpenseRecord, User, Group, Settings } from '../types'
+import type { ExpenseRecord, User, Group, Settings, ExchangeRates } from '../types'
 import { DEFAULT_GROUP_UUID } from '../types'
 
 const db = new Dexie('RecordMoney') as Dexie & {
@@ -7,6 +7,7 @@ const db = new Dexie('RecordMoney') as Dexie & {
   users: EntityTable<User, 'email'>
   groups: EntityTable<Group, 'uuid'>
   settings: EntityTable<Settings, 'key'>
+  exchangeRates: EntityTable<ExchangeRates, 'key'>
 }
 
 db.version(1).stores({
@@ -14,6 +15,14 @@ db.version(1).stores({
   users: 'email',
   groups: 'uuid',
   settings: 'key',
+})
+
+db.version(2).stores({
+  records: 'uuid, groupId, date, category, sourceHash',
+  users: 'email',
+  groups: 'uuid',
+  settings: 'key',
+  exchangeRates: 'key',
 })
 
 export { db }

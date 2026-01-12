@@ -129,10 +129,24 @@ function convertAmount(
 
 ## Caching Rates
 
-- Cache rates in memory during session
-- Show "Rates as of [timestamp]" in UI
-- "Refresh rates" button for manual update
-- Rates NOT persisted to IndexedDB (always fetch fresh when needed)
+- Cache rates in IndexedDB with timestamp
+- Rates cached for 1 hour before auto-refresh
+- Show "Rates as of [timestamp]" in UI (e.g., "Rates: 5 minutes ago")
+- "Refresh rates" button (↻) for manual update
+- Stale rates used as fallback when offline or API fails
+
+### Implementation
+
+```typescript
+interface ExchangeRates {
+  key: string;           // 'rates' - single row key
+  baseCurrency: string;  // 'EUR' (Frankfurter default)
+  rates: Record<string, number>;
+  fetchedAt: number;     // timestamp ms
+}
+
+// Stored in IndexedDB: db.exchangeRates
+```
 
 ---
 

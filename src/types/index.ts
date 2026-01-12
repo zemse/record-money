@@ -53,3 +53,11 @@ export interface Settings {
   currentUserEmail?: string // email of the current user ("me")
   theme: Theme // default: 'system'
 }
+
+// Exchange rates storage
+export interface ExchangeRates {
+  key: string // 'rates' - single row key
+  baseCurrency: string // base currency (EUR for Frankfurter API)
+  rates: Record<string, number> // currency code -> rate relative to base
+  fetchedAt: number // timestamp ms when rates were fetched
+}
