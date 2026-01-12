@@ -58,8 +58,10 @@ const EXPENSE_SYSTEM_PROMPT = `You are an AI assistant for a personal expense tr
 
 CAPABILITIES:
 1. Create expense records from natural language descriptions
-2. Query existing expenses
-3. Answer questions about balances and spending
+2. Update existing expenses (change amount, title, category, etc.)
+3. Delete expenses
+4. Query existing expenses from the data provided in CONTEXT
+5. Answer questions about balances and spending using the balance data in CONTEXT
 
 WHEN CREATING EXPENSES, extract:
 - title: Brief description of the expense
@@ -72,7 +74,8 @@ WHEN CREATING EXPENSES, extract:
 - splitType: "equal", "exact", or "percentage"
 
 RESPONSE FORMAT:
-For expense creation, respond with a JSON block:
+
+For expense CREATION:
 \`\`\`json
 {
   "action": "create_expense",
@@ -90,7 +93,38 @@ For expense creation, respond with a JSON block:
 }
 \`\`\`
 
-For queries, respond naturally with the requested information.
+For expense UPDATE (only include fields that are changing):
+\`\`\`json
+{
+  "action": "update_expense",
+  "data": {
+    "uuid": "the expense uuid from RECENT EXPENSES",
+    "title": "new title (optional)",
+    "amount": new_amount (optional),
+    "currency": "new currency (optional)",
+    "category": "new category (optional)",
+    "date": "new date (optional)"
+  },
+  "confirmation": "Human-readable summary of what will be changed"
+}
+\`\`\`
+
+For expense DELETE:
+\`\`\`json
+{
+  "action": "delete_expense",
+  "data": {
+    "uuid": "the expense uuid from RECENT EXPENSES"
+  },
+  "confirmation": "Human-readable summary of what will be deleted"
+}
+\`\`\`
+
+For queries about expenses, balances, or spending:
+- Use the RECENT EXPENSES data to answer questions about spending history
+- Use the BALANCES data to answer questions about who owes whom
+- Respond naturally with the requested information
+- Format currency amounts nicely (e.g., ₹450 or INR 450)
 
 For unclear requests, ask clarifying questions.
 
@@ -98,7 +132,12 @@ IMPORTANT:
 - Be concise and helpful
 - Default to sensible values when not specified
 - Use "me" for the current user in paidBy/paidFor
-- Always include a confirmation message explaining the expense`
+- Always include a confirmation message explaining the action
+- When answering balance queries, use the pre-calculated balance data provided
+- "owes" means the current user owes money TO those people
+- "owedBy" means those people owe money TO the current user
+- For update/delete, you MUST use the exact uuid from RECENT EXPENSES
+- If user refers to an expense vaguely (e.g., "the lunch yesterday"), find the matching expense in RECENT EXPENSES and use its uuid`
 
 // Send message to Claude
 export async function sendMessage(
@@ -108,6 +147,21 @@ export async function sendMessage(
     currentUserEmail?: string
     currentDate?: string
     users?: { email: string; alias: string }[]
+    recentExpenses?: {
+      uuid: string
+      title: string
+      amount: number
+      currency: string
+      category: string
+      date: string
+      paidBy: string[]
+      paidFor: string[]
+    }[]
+    balances?: {
+      owes: { email: string; amount: number; currency: string }[]
+      owedBy: { email: string; amount: number; currency: string }[]
+      netBalance: number
+    } | null
   }
 ): Promise<ClaudeResponse | ClaudeError> {
   try {
@@ -124,6 +178,40 @@ export async function sendMessage(
       }
       if (context.users && context.users.length > 0) {
         systemPrompt += `\n- Known users: ${context.users.map((u) => `${u.alias} (${u.email})`).join(', ')}`
+      }
+
+      // Add balance data
+      if (context.balances) {
+        systemPrompt += '\n\nBALANCES (for the current user):'
+        if (context.balances.owes.length > 0) {
+          systemPrompt += '\nYou owe:'
+          context.balances.owes.forEach((b) => {
+            systemPrompt += `\n  - ${b.email}: ${b.currency} ${b.amount.toFixed(2)}`
+          })
+        } else {
+          systemPrompt += '\nYou owe: Nobody (all settled!)'
+        }
+        if (context.balances.owedBy.length > 0) {
+          systemPrompt += '\nOwed to you:'
+          context.balances.owedBy.forEach((b) => {
+            systemPrompt += `\n  - ${b.email}: ${b.currency} ${b.amount.toFixed(2)}`
+          })
+        } else {
+          systemPrompt += '\nOwed to you: Nobody'
+        }
+        systemPrompt += `\nNet balance: ${context.balances.netBalance >= 0 ? '+' : ''}${context.balances.netBalance.toFixed(2)} (positive means others owe you)`
+      } else {
+        systemPrompt += '\n\nBALANCES: No expense data available yet.'
+      }
+
+      // Add recent expenses data
+      if (context.recentExpenses && context.recentExpenses.length > 0) {
+        systemPrompt += '\n\nRECENT EXPENSES (up to 50 most recent):'
+        context.recentExpenses.forEach((e) => {
+          systemPrompt += `\n- [uuid: ${e.uuid}] ${e.date}: ${e.title} - ${e.currency} ${e.amount} (${e.category}) | Paid by: ${e.paidBy.join(', ')} | For: ${e.paidFor.join(', ')}`
+        })
+      } else {
+        systemPrompt += '\n\nRECENT EXPENSES: No expenses recorded yet.'
       }
     }
 
@@ -170,7 +258,7 @@ export async function sendMessage(
 }
 
 // Parse expense action from Claude's response
-export interface ExpenseAction {
+export interface CreateExpenseAction {
   action: 'create_expense'
   data: {
     title: string
@@ -185,6 +273,29 @@ export interface ExpenseAction {
   confirmation: string
 }
 
+export interface UpdateExpenseAction {
+  action: 'update_expense'
+  data: {
+    uuid: string
+    title?: string
+    amount?: number
+    currency?: string
+    category?: string
+    date?: string
+  }
+  confirmation: string
+}
+
+export interface DeleteExpenseAction {
+  action: 'delete_expense'
+  data: {
+    uuid: string
+  }
+  confirmation: string
+}
+
+export type ExpenseAction = CreateExpenseAction | UpdateExpenseAction | DeleteExpenseAction
+
 export function parseExpenseAction(content: string): ExpenseAction | null {
   // Look for JSON block in response
   const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/)
@@ -193,7 +304,13 @@ export function parseExpenseAction(content: string): ExpenseAction | null {
   try {
     const parsed = JSON.parse(jsonMatch[1])
     if (parsed.action === 'create_expense' && parsed.data) {
-      return parsed as ExpenseAction
+      return parsed as CreateExpenseAction
+    }
+    if (parsed.action === 'update_expense' && parsed.data?.uuid) {
+      return parsed as UpdateExpenseAction
+    }
+    if (parsed.action === 'delete_expense' && parsed.data?.uuid) {
+      return parsed as DeleteExpenseAction
     }
     return null
   } catch {

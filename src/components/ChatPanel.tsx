@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, generateUUID, now, updateSettings } from '../db'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
@@ -8,6 +8,7 @@ import {
   type Message,
   type ExpenseAction,
 } from '../utils/claudeClient'
+import { calculateUserBalances } from '../utils/balanceCalculator'
 import type { ExpenseRecord } from '../types'
 
 interface ChatMessage extends Message {
@@ -26,11 +27,18 @@ export function ChatPanel() {
 
   const settings = useLiveQuery(() => db.settings.get('main'))
   const users = useLiveQuery(() => db.users.toArray())
+  const records = useLiveQuery(() => db.records.toArray())
   const isOnline = useOnlineStatus()
 
   const hasApiKey = !!settings?.claudeApiKey
   const currentUserEmail = settings?.currentUserEmail
   const autoApply = settings?.autoApplyAiChanges ?? false
+
+  // Calculate balances for the current user
+  const userBalances = useMemo(() => {
+    if (!currentUserEmail || !records) return null
+    return calculateUserBalances(records, currentUserEmail)
+  }, [records, currentUserEmail])
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -51,11 +59,33 @@ export function ChatPanel() {
     setInput('')
     setIsLoading(true)
 
-    // Prepare context
+    // Prepare context with expense data for queries
+    const recentRecords = records
+      ?.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 50) // Limit to 50 most recent records to avoid token limits
+      .map((r) => ({
+        uuid: r.uuid,
+        title: r.title,
+        amount: r.amount,
+        currency: r.currency,
+        category: r.category,
+        date: r.date,
+        paidBy: r.paidBy.map((p) => p.email),
+        paidFor: r.paidFor.map((p) => p.email),
+      }))
+
     const context = {
       currentUserEmail,
       currentDate: new Date().toISOString().split('T')[0],
       users: users?.map((u) => ({ email: u.email, alias: u.alias })) || [],
+      recentExpenses: recentRecords || [],
+      balances: userBalances
+        ? {
+            owes: userBalances.owes,
+            owedBy: userBalances.owedBy,
+            netBalance: userBalances.netBalance,
+          }
+        : null,
     }
 
     // Get conversation history for Claude
@@ -84,7 +114,7 @@ export function ChatPanel() {
 
       // Auto-apply if enabled
       if (action && autoApply) {
-        await applyExpenseAction(action, messageId)
+        await applyExpenseAction(action)
       }
     } else {
       const errorMessage: ChatMessage = {
@@ -100,59 +130,139 @@ export function ChatPanel() {
   }
 
   // Apply expense action (used by both manual confirm and auto-apply)
-  const applyExpenseAction = async (action: ExpenseAction, _messageId?: string) => {
-    if (action.action !== 'create_expense') return
+  const applyExpenseAction = async (action: ExpenseAction) => {
+    if (action.action === 'create_expense') {
+      const { data } = action
 
-    const { data } = action
+      // Resolve "me" to current user email
+      const resolvePaidBy = data.paidBy.map((p) =>
+        p === 'me' && currentUserEmail ? currentUserEmail : p
+      )
+      const resolvePaidFor = data.paidFor.map((p) =>
+        p === 'me' && currentUserEmail ? currentUserEmail : p
+      )
 
-    // Resolve "me" to current user email
-    const resolvePaidBy = data.paidBy.map((p) =>
-      p === 'me' && currentUserEmail ? currentUserEmail : p
-    )
-    const resolvePaidFor = data.paidFor.map((p) =>
-      p === 'me' && currentUserEmail ? currentUserEmail : p
-    )
+      // Create the expense record
+      const record: ExpenseRecord = {
+        uuid: generateUUID(),
+        title: data.title,
+        description: '',
+        category: data.category,
+        amount: data.amount,
+        currency: data.currency,
+        date: data.date,
+        time: new Date().toTimeString().slice(0, 5),
+        icon: getCategoryIcon(data.category),
+        paidBy: resolvePaidBy.map((email) => ({
+          email,
+          share: data.amount / resolvePaidBy.length,
+        })),
+        paidFor: resolvePaidFor.map((email) => ({
+          email,
+          share: data.amount / resolvePaidFor.length,
+        })),
+        shareType: data.splitType,
+        groupId: null,
+        comments: 'Created via AI assistant',
+        createdAt: now(),
+        updatedAt: now(),
+      }
 
-    // Create the expense record
-    const record: ExpenseRecord = {
-      uuid: generateUUID(),
-      title: data.title,
-      description: '',
-      category: data.category,
-      amount: data.amount,
-      currency: data.currency,
-      date: data.date,
-      time: new Date().toTimeString().slice(0, 5),
-      icon: getCategoryIcon(data.category),
-      paidBy: resolvePaidBy.map((email) => ({ email, share: data.amount / resolvePaidBy.length })),
-      paidFor: resolvePaidFor.map((email) => ({
-        email,
-        share: data.amount / resolvePaidFor.length,
-      })),
-      shareType: data.splitType,
-      groupId: null,
-      comments: 'Created via AI assistant',
-      createdAt: now(),
-      updatedAt: now(),
+      await db.records.add(record)
+
+      // Add confirmation message
+      const confirmMessage: ChatMessage = {
+        id: generateUUID(),
+        role: 'assistant',
+        content: `Done! I've added "${data.title}" for ${data.currency} ${data.amount}.`,
+        timestamp: Date.now(),
+      }
+      setMessages((prev) => [...prev, confirmMessage])
+    } else if (action.action === 'update_expense') {
+      const { data } = action
+
+      // Find the existing record
+      const existingRecord = await db.records.get(data.uuid)
+      if (!existingRecord) {
+        const errorMessage: ChatMessage = {
+          id: generateUUID(),
+          role: 'assistant',
+          content: `Error: Could not find the expense to update.`,
+          timestamp: Date.now(),
+        }
+        setMessages((prev) => [...prev, errorMessage])
+        return
+      }
+
+      // Build update object with only changed fields
+      const updates: Partial<ExpenseRecord> = {
+        updatedAt: now(),
+      }
+
+      if (data.title !== undefined) updates.title = data.title
+      if (data.amount !== undefined) {
+        updates.amount = data.amount
+        // Recalculate shares if amount changed
+        updates.paidBy = existingRecord.paidBy.map((p) => ({
+          ...p,
+          share: data.amount! / existingRecord.paidBy.length,
+        }))
+        updates.paidFor = existingRecord.paidFor.map((p) => ({
+          ...p,
+          share: data.amount! / existingRecord.paidFor.length,
+        }))
+      }
+      if (data.currency !== undefined) updates.currency = data.currency
+      if (data.category !== undefined) {
+        updates.category = data.category
+        updates.icon = getCategoryIcon(data.category)
+      }
+      if (data.date !== undefined) updates.date = data.date
+
+      await db.records.update(data.uuid, updates)
+
+      // Add confirmation message
+      const confirmMessage: ChatMessage = {
+        id: generateUUID(),
+        role: 'assistant',
+        content: `Done! I've updated the expense.`,
+        timestamp: Date.now(),
+      }
+      setMessages((prev) => [...prev, confirmMessage])
+    } else if (action.action === 'delete_expense') {
+      const { data } = action
+
+      // Find the existing record first (for confirmation message)
+      const existingRecord = await db.records.get(data.uuid)
+      if (!existingRecord) {
+        const errorMessage: ChatMessage = {
+          id: generateUUID(),
+          role: 'assistant',
+          content: `Error: Could not find the expense to delete.`,
+          timestamp: Date.now(),
+        }
+        setMessages((prev) => [...prev, errorMessage])
+        return
+      }
+
+      await db.records.delete(data.uuid)
+
+      // Add confirmation message
+      const confirmMessage: ChatMessage = {
+        id: generateUUID(),
+        role: 'assistant',
+        content: `Done! I've deleted "${existingRecord.title}".`,
+        timestamp: Date.now(),
+      }
+      setMessages((prev) => [...prev, confirmMessage])
     }
-
-    await db.records.add(record)
-
-    // Add confirmation message
-    const confirmMessage: ChatMessage = {
-      id: generateUUID(),
-      role: 'assistant',
-      content: `Done! I've added "${data.title}" for ${data.currency} ${data.amount}.`,
-      timestamp: Date.now(),
-    }
-    setMessages((prev) => [...prev, confirmMessage])
   }
 
   const handleConfirmAction = async (messageId: string) => {
     const message = messages.find((m) => m.id === messageId)
     if (!message?.action) return
 
-    await applyExpenseAction(message.action, messageId)
+    await applyExpenseAction(message.action)
 
     // Update message status
     setMessages((prev) =>
@@ -252,26 +362,61 @@ export function ChatPanel() {
                   {message.action && message.actionStatus === 'pending' ? (
                     <div>
                       <p className="mb-2 text-sm">{message.action.confirmation}</p>
-                      <div className="rounded-xl bg-surface p-3">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xl">
-                            {getCategoryIcon(message.action.data.category)}
-                          </span>
-                          <div>
-                            <p className="font-medium">{message.action.data.title}</p>
-                            <p className="text-sm text-content-secondary">
-                              {message.action.data.currency} {message.action.data.amount} •{' '}
-                              {message.action.data.date}
-                            </p>
+                      {message.action.action === 'create_expense' && (
+                        <div className="rounded-xl bg-surface p-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">
+                              {getCategoryIcon(message.action.data.category)}
+                            </span>
+                            <div>
+                              <p className="font-medium">{message.action.data.title}</p>
+                              <p className="text-sm text-content-secondary">
+                                {message.action.data.currency} {message.action.data.amount} •{' '}
+                                {message.action.data.date}
+                              </p>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      )}
+                      {message.action.action === 'update_expense' && (
+                        <div className="rounded-xl bg-surface p-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">✏️</span>
+                            <div>
+                              <p className="font-medium">Update Expense</p>
+                              <p className="text-sm text-content-secondary">
+                                {message.action.data.title && `Title: ${message.action.data.title}`}
+                                {message.action.data.amount &&
+                                  ` • Amount: ${message.action.data.amount}`}
+                                {message.action.data.category &&
+                                  ` • ${message.action.data.category}`}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {message.action.action === 'delete_expense' && (
+                        <div className="rounded-xl bg-red-50 p-3 dark:bg-red-900/20">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">🗑️</span>
+                            <div>
+                              <p className="font-medium text-red-600 dark:text-red-400">
+                                Delete Expense
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       <div className="mt-3 flex gap-2">
                         <button
                           onClick={() => handleConfirmAction(message.id)}
-                          className="flex-1 rounded-lg bg-green-500 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-600"
+                          className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-medium text-white ${
+                            message.action.action === 'delete_expense'
+                              ? 'bg-red-500 hover:bg-red-600'
+                              : 'bg-green-500 hover:bg-green-600'
+                          }`}
                         >
-                          Confirm
+                          {message.action.action === 'delete_expense' ? 'Delete' : 'Confirm'}
                         </button>
                         <button
                           onClick={() => handleCancelAction(message.id)}
@@ -286,7 +431,14 @@ export function ChatPanel() {
                       <p className="mb-2 text-sm line-through opacity-70">
                         {message.action.confirmation}
                       </p>
-                      <p className="text-sm text-green-600 dark:text-green-400">✓ Added</p>
+                      <p className="text-sm text-green-600 dark:text-green-400">
+                        ✓{' '}
+                        {message.action.action === 'create_expense'
+                          ? 'Added'
+                          : message.action.action === 'update_expense'
+                            ? 'Updated'
+                            : 'Deleted'}
+                      </p>
                     </div>
                   ) : message.action && message.actionStatus === 'cancelled' ? (
                     <div>

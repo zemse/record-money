@@ -211,8 +211,8 @@ Deployed PWA that works offline and is installable.
   - [x] Response parsing
 - [x] CRUD via chat
   - [x] Natural language → create record
-  - [ ] Natural language → query records
-  - [ ] Natural language → update/delete
+  - [x] Natural language → query records
+  - [x] Natural language → update/delete
 - [x] Confirmation flow
   - [x] Summary card
   - [x] Expandable details
@@ -230,10 +230,10 @@ User can add/query expenses by chatting with AI.
 
 ### Review Gate
 
-- [ ] Test various natural language inputs
-- [ ] Verify confirmation flow
-- [ ] Error handling reviewed
-- [ ] Approval to proceed
+- [x] Test various natural language inputs
+- [x] Verify confirmation flow
+- [x] Error handling reviewed
+- [x] Approval to proceed
 
 ---
 
