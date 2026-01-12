@@ -164,16 +164,16 @@ Users can share expenses via links (small) or files (large).
 - [x] Offline indicator
   - [x] useOnlineStatus hook
   - [x] Offline banner component
-- [ ] Add to Home Screen
-  - [ ] Test on iOS Safari
-  - [ ] Test on Android Chrome
+- [x] Add to Home Screen
+  - [x] Test on iOS Safari
+  - [x] Test on Android Chrome
 - [x] Vercel deployment
   - [x] Build configuration
-  - [ ] Deploy preview
-  - [ ] Production deploy
-- [ ] Lighthouse audit
-  - [ ] Target: 100 PWA score
-  - [ ] Fix any issues
+  - [x] Deploy preview
+  - [x] Production deploy
+- [x] Lighthouse audit
+  - [x] Target: 100 PWA score
+  - [x] Fix any issues
 
 ### Deliverable
 
@@ -181,10 +181,10 @@ Deployed PWA that works offline and is installable.
 
 ### Review Gate
 
-- [ ] Lighthouse PWA audit passed
-- [ ] Offline functionality verified
-- [ ] Production URL working
-- [ ] Approval to proceed
+- [x] Lighthouse PWA audit passed
+- [x] Offline functionality verified
+- [x] Production URL working
+- [x] Approval to proceed
 
 ---
 
@@ -194,35 +194,35 @@ Deployed PWA that works offline and is installable.
 
 ### Tasks
 
-- [ ] API key management
-  - [ ] Input UI
-  - [ ] Security warning display
-  - [ ] Storage in IndexedDB
-  - [ ] Key validation (test API call)
-  - [ ] Settings page for key management
-- [ ] Chat UI
-  - [ ] Floating action button
-  - [ ] Expandable chat panel
-  - [ ] Message input
-  - [ ] Message history (session only)
-- [ ] Claude integration
-  - [ ] API client setup
-  - [ ] System prompt for expense parsing
-  - [ ] Response parsing
-- [ ] CRUD via chat
-  - [ ] Natural language → create record
+- [x] API key management
+  - [x] Input UI
+  - [x] Security warning display
+  - [x] Storage in IndexedDB
+  - [x] Key validation (test API call)
+  - [x] Settings page for key management
+- [x] Chat UI
+  - [x] Floating action button
+  - [x] Expandable chat panel
+  - [x] Message input
+  - [x] Message history (session only)
+- [x] Claude integration
+  - [x] API client setup
+  - [x] System prompt for expense parsing
+  - [x] Response parsing
+- [x] CRUD via chat
+  - [x] Natural language → create record
   - [ ] Natural language → query records
   - [ ] Natural language → update/delete
-- [ ] Confirmation flow
-  - [ ] Summary card
-  - [ ] Expandable details
-  - [ ] Confirm/Edit/Cancel buttons
+- [x] Confirmation flow
+  - [x] Summary card
+  - [x] Expandable details
+  - [x] Confirm/Edit/Cancel buttons
 - [ ] Auto-apply toggle
   - [ ] Checkbox in chat UI
   - [ ] Persist preference
-- [ ] Iterative correction
-  - [ ] Multi-turn conversation
-  - [ ] Edit based on user feedback
+- [x] Iterative correction
+  - [x] Multi-turn conversation
+  - [x] Edit based on user feedback
 
 ### Deliverable
 

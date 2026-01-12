@@ -7,6 +7,7 @@ import type { Theme, Category, ExpenseRecord } from '../types'
 import { EmojiPicker } from '../components/EmojiPicker'
 import { generateCategoryId } from '../constants/categories'
 import { findPotentialDuplicates, type PotentialDuplicate } from '../utils/deduplication'
+import { validateApiKey } from '../utils/claudeClient'
 
 const themeOptions: { value: Theme; label: string; icon: string }[] = [
   { value: 'light', label: 'Light', icon: '☀️' },
@@ -23,6 +24,14 @@ export function SettingsPage() {
   const categories = useLiveQuery(() => db.categories.toArray())
   const records = useLiveQuery(() => db.records.toArray())
   const { theme, setTheme } = useTheme()
+
+  // API key management state
+  const [apiKeyInput, setApiKeyInput] = useState('')
+  const [showApiKey, setShowApiKey] = useState(false)
+  const [apiKeyStatus, setApiKeyStatus] = useState<'idle' | 'validating' | 'valid' | 'invalid'>(
+    'idle'
+  )
+  const [apiKeyError, setApiKeyError] = useState('')
 
   // Category management state
   const [showCategoryForm, setShowCategoryForm] = useState(false)
@@ -41,6 +50,36 @@ export function SettingsPage() {
 
   const handleCurrencyChange = async (currency: string) => {
     await updateSettings({ defaultDisplayCurrency: currency })
+  }
+
+  const handleSaveApiKey = async () => {
+    if (!apiKeyInput.trim()) {
+      setApiKeyError('API key is required')
+      return
+    }
+
+    setApiKeyStatus('validating')
+    setApiKeyError('')
+
+    const result = await validateApiKey(apiKeyInput.trim())
+
+    if (result.success) {
+      await updateSettings({ claudeApiKey: apiKeyInput.trim() })
+      setApiKeyStatus('valid')
+      setApiKeyInput('')
+      setTimeout(() => setApiKeyStatus('idle'), 2000)
+    } else {
+      setApiKeyStatus('invalid')
+      setApiKeyError(result.error)
+    }
+  }
+
+  const handleClearApiKey = async () => {
+    if (window.confirm('Remove your Claude API key? AI features will be disabled.')) {
+      await updateSettings({ claudeApiKey: undefined })
+      setApiKeyStatus('idle')
+      setApiKeyInput('')
+    }
   }
 
   const handleClearCurrentUser = async () => {
@@ -255,6 +294,93 @@ export function SettingsPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* AI Settings */}
+        <div className="rounded-2xl border border-border-default bg-surface p-5">
+          <h2 className="font-medium text-content">AI Assistant</h2>
+          <p className="mt-1 text-sm text-content-secondary">
+            Enable natural language expense entry with Claude AI
+          </p>
+
+          {settings?.claudeApiKey ? (
+            <div className="mt-4">
+              <div className="flex items-center justify-between rounded-xl bg-green-50 px-4 py-3 dark:bg-green-500/10">
+                <div className="flex items-center gap-2">
+                  <span className="text-green-600 dark:text-green-400">✓</span>
+                  <span className="text-sm font-medium text-green-700 dark:text-green-400">
+                    API key configured
+                  </span>
+                </div>
+                <button
+                  onClick={handleClearApiKey}
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="mt-4 space-y-3">
+              <div className="rounded-xl bg-amber-50 px-4 py-3 dark:bg-amber-500/10">
+                <p className="text-sm text-amber-700 dark:text-amber-400">
+                  <strong>Security Note:</strong> Your API key is stored locally in your browser.
+                  It's visible to browser extensions and anyone with device access. We recommend
+                  using a key with spending limits set in your Anthropic console.
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type={showApiKey ? 'text' : 'password'}
+                    value={apiKeyInput}
+                    onChange={(e) => {
+                      setApiKeyInput(e.target.value)
+                      setApiKeyError('')
+                      setApiKeyStatus('idle')
+                    }}
+                    placeholder="sk-ant-api..."
+                    className="w-full rounded-lg border border-border-default bg-surface px-3 py-2 pr-10 text-content transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowApiKey(!showApiKey)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-content-tertiary hover:text-content"
+                  >
+                    {showApiKey ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
+                <button
+                  onClick={handleSaveApiKey}
+                  disabled={apiKeyStatus === 'validating' || !apiKeyInput.trim()}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {apiKeyStatus === 'validating' ? 'Validating...' : 'Save'}
+                </button>
+              </div>
+
+              {apiKeyError && <p className="text-sm text-red-500">{apiKeyError}</p>}
+
+              {apiKeyStatus === 'valid' && (
+                <p className="text-sm text-green-600 dark:text-green-400">
+                  API key saved successfully!
+                </p>
+              )}
+
+              <p className="text-xs text-content-tertiary">
+                Get your API key from{' '}
+                <a
+                  href="https://console.anthropic.com/settings/keys"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  console.anthropic.com
+                </a>
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Categories */}

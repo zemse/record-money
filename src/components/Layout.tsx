@@ -1,5 +1,6 @@
 import { Outlet, NavLink } from 'react-router-dom'
 import { OfflineBanner } from './OfflineBanner'
+import { ChatPanel } from './ChatPanel'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: '📊', end: true },
@@ -75,6 +76,9 @@ export function Layout() {
           ))}
         </div>
       </nav>
+
+      {/* AI Chat Panel */}
+      <ChatPanel />
     </div>
   )
 }
