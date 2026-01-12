@@ -6,6 +6,12 @@ import { DEFAULT_GROUP_UUID } from '../types'
 import { UserPicker } from '../components/UserPicker'
 import { calculateBalancesByGroup, formatAmount } from '../utils/balanceCalculator'
 import { getExchangeRates, convertAmount } from '../utils/currencyConverter'
+import {
+  generateExportUrl,
+  exportToFile,
+  copyToClipboard,
+  getUsersFromRecords,
+} from '../utils/dataTransport'
 
 export function GroupsPage() {
   const [showForm, setShowForm] = useState(false)
@@ -14,6 +20,10 @@ export function GroupsPage() {
   const [members, setMembers] = useState<string[]>([])
   const [error, setError] = useState('')
   const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(null)
+
+  // Export states
+  const [exportingGroupId, setExportingGroupId] = useState<string | null>(null)
+  const [exportMessage, setExportMessage] = useState('')
 
   const groups = useLiveQuery(() => db.groups.toArray())
   const users = useLiveQuery(() => db.users.toArray())
@@ -124,6 +134,56 @@ export function GroupsPage() {
     return user?.alias || email
   }
 
+  // Get records for a specific group
+  const getGroupRecords = (groupId: string) => {
+    return records?.filter((r) => r.groupId === groupId) || []
+  }
+
+  // Export handlers
+  const handleExportUrl = async (group: Group) => {
+    if (!users) return
+
+    const groupRecords = getGroupRecords(group.uuid)
+    if (groupRecords.length === 0) {
+      setExportMessage('No records to export in this group')
+      setTimeout(() => setExportMessage(''), 3000)
+      return
+    }
+
+    const exportUsers = getUsersFromRecords(groupRecords, users)
+    const result = generateExportUrl(groupRecords, exportUsers)
+
+    if (result.success) {
+      const copied = await copyToClipboard(result.url)
+      setExportMessage(copied ? 'Link copied to clipboard!' : 'Failed to copy link')
+    } else {
+      setExportMessage(result.error)
+    }
+
+    setExportingGroupId(null)
+    setTimeout(() => setExportMessage(''), 3000)
+  }
+
+  const handleExportFile = (group: Group) => {
+    if (!users) return
+
+    const groupRecords = getGroupRecords(group.uuid)
+    if (groupRecords.length === 0) {
+      setExportMessage('No records to export in this group')
+      setExportingGroupId(null)
+      setTimeout(() => setExportMessage(''), 3000)
+      return
+    }
+
+    const exportUsers = getUsersFromRecords(groupRecords, users)
+    const filename = `${group.name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}.recordmoney`
+
+    exportToFile(groupRecords, exportUsers, [group], filename)
+    setExportingGroupId(null)
+    setExportMessage('File downloaded!')
+    setTimeout(() => setExportMessage(''), 3000)
+  }
+
   const inputClassName =
     'mt-1 block w-full rounded-xl border border-border-default bg-surface px-3 py-2.5 text-content shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary'
 
@@ -204,6 +264,19 @@ export function GroupsPage() {
         </button>
       </div>
 
+      {/* Export message */}
+      {exportMessage && (
+        <div
+          className={`rounded-xl px-4 py-3 text-sm ${
+            exportMessage.includes('copied') || exportMessage.includes('downloaded')
+              ? 'bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400'
+              : 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400'
+          }`}
+        >
+          {exportMessage}
+        </div>
+      )}
+
       {!groups || groups.length === 0 ? (
         <div className="rounded-2xl border border-border-default bg-surface py-16 text-center">
           <p className="text-5xl">👥</p>
@@ -254,22 +327,64 @@ export function GroupsPage() {
                       </p>
                     </div>
                   </div>
-                  {!group.isDefault && (
-                    <div className="flex flex-shrink-0 gap-1">
+                  <div className="flex flex-shrink-0 gap-1">
+                    {/* Export dropdown */}
+                    <div className="relative">
                       <button
-                        onClick={() => handleEdit(group)}
-                        className="rounded-lg px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary-light"
+                        onClick={() =>
+                          setExportingGroupId(exportingGroupId === group.uuid ? null : group.uuid)
+                        }
+                        className="rounded-lg px-3 py-1.5 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-tertiary"
                       >
-                        Edit
+                        Export
                       </button>
-                      <button
-                        onClick={() => handleDelete(group.uuid)}
-                        className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
-                      >
-                        Delete
-                      </button>
+
+                      {exportingGroupId === group.uuid && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-10"
+                            onClick={() => setExportingGroupId(null)}
+                          />
+                          <div className="absolute right-0 z-20 mt-1 w-44 rounded-xl border border-border-default bg-surface p-2 shadow-lg">
+                            <p className="px-3 py-1 text-xs text-content-tertiary">
+                              {getGroupRecords(group.uuid).length} records
+                            </p>
+                            <button
+                              onClick={() => handleExportUrl(group)}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
+                            >
+                              <span>🔗</span>
+                              <span>Copy Link</span>
+                            </button>
+                            <button
+                              onClick={() => handleExportFile(group)}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
+                            >
+                              <span>📁</span>
+                              <span>Download File</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
-                  )}
+
+                    {!group.isDefault && (
+                      <>
+                        <button
+                          onClick={() => handleEdit(group)}
+                          className="rounded-lg px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary-light"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(group.uuid)}
+                          className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {/* Balance Summary */}

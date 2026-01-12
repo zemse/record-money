@@ -130,6 +130,23 @@ export function RecordsPage() {
     }
   }
 
+  // Share single record
+  const handleShareRecord = async (record: ExpenseRecord) => {
+    if (!users) return
+
+    const exportUsers = getUsersFromRecords([record], users)
+    const result = generateExportUrl([record], exportUsers)
+
+    if (result.success) {
+      const copied = await copyToClipboard(result.url)
+      setExportMessage(copied ? 'Share link copied!' : 'Failed to copy link')
+    } else {
+      setExportMessage(result.error)
+    }
+
+    setTimeout(() => setExportMessage(''), 3000)
+  }
+
   const handleAdd = async (data: Omit<ExpenseRecord, 'uuid' | 'createdAt' | 'updatedAt'>) => {
     const timestamp = now()
     await db.records.add({
@@ -474,6 +491,7 @@ export function RecordsPage() {
           currentUserEmail={settings?.currentUserEmail}
           onEdit={handleEdit}
           onDelete={handleDelete}
+          onShare={handleShareRecord}
         />
       )}
     </div>

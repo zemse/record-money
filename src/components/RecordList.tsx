@@ -6,6 +6,7 @@ interface RecordListProps {
   currentUserEmail?: string
   onEdit: (record: ExpenseRecord) => void
   onDelete: (uuid: string) => void
+  onShare?: (record: ExpenseRecord) => void
 }
 
 export function RecordList({
@@ -14,6 +15,7 @@ export function RecordList({
   currentUserEmail,
   onEdit,
   onDelete,
+  onShare,
 }: RecordListProps) {
   const getUserAlias = (email: string) => {
     const user = users.find((u) => u.email === email)
@@ -131,6 +133,17 @@ export function RecordList({
                     </div>
                   </div>
                   <div className="mt-3 flex justify-end gap-1 border-t border-border-default pt-3">
+                    {onShare && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onShare(record)
+                        }}
+                        className="rounded-lg px-3 py-1.5 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-tertiary"
+                      >
+                        Share
+                      </button>
+                    )}
                     <button
                       onClick={(e) => {
                         e.stopPropagation()
