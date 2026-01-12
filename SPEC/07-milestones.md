@@ -53,36 +53,53 @@ Working app where user can add expenses with splits, manage users and groups.
 
 ## Milestone 2: Balance & Display
 
-**Goal:** Calculate and display who owes whom.
+**Goal:** Calculate and display who owes whom via a Dashboard home page.
 
 ### Tasks
 
+- [ ] Current user ("Me") support
+  - [ ] Add `currentUserEmail` to Settings type
+  - [ ] "Set as Me" button on user cards in Users page
+  - [ ] Display current user in Settings page
+- [ ] Default display currency
+  - [ ] Add `defaultDisplayCurrency` to Settings type
+  - [ ] Currency selector in Settings page
+  - [ ] Convert balances to display currency on Dashboard
 - [ ] Balance calculation logic
   - [ ] Per-group balances
   - [ ] Net simplification (A owes B ₹100, B owes A ₹30 → A owes B ₹70)
   - [ ] Handle all share types (equal, percentage, exact, shares)
+- [ ] Dashboard page (new home page at `/`)
+  - [ ] Overall summary card (net balance, you owe vs owed to you)
+  - [ ] Per-group balance cards
+  - [ ] Non-group expenses summary
+  - [ ] Detailed balance list (expandable)
+  - [ ] Prompt to set "me" if not configured
+  - [ ] Color coding (green = owed, red = owe)
+- [ ] Navigation update
+  - [ ] Dashboard at `/` (new home)
+  - [ ] Records moves to `/records`
+  - [ ] Add Dashboard icon to nav
 - [ ] Records list improvements
   - [ ] Filter by group
   - [ ] Filter by date range
   - [ ] Filter by category
   - [ ] Search by title
-- [ ] Balance display UI
-  - [ ] Group balance summary
-  - [ ] "You owe" / "You are owed" view
-  - [ ] Settle up button (creates settlement record)
-- [ ] Category management
+- [ ] Settle up (phase 2)
+  - [ ] Settle up button creates settlement record
+- [ ] Category management (if time permits)
   - [ ] Predefined categories
   - [ ] Custom categories
   - [ ] Category icons (emoji)
 
 ### Deliverable
 
-User can see balances, filter records, manage categories.
+User can see Dashboard with balance summaries, filter records, and track who owes whom.
 
 ### Review Gate
 
 - [ ] Balance calculation verified with test cases
-- [ ] UI review
+- [ ] Dashboard UI review
 - [ ] Approval to proceed
 
 ---

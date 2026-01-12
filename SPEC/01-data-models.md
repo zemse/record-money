@@ -89,10 +89,16 @@ interface Settings {
   claudeApiKey?: string; // stored locally
   autoApplyAiChanges: boolean; // default: false
   lastUsedCurrency: string; // ISO 4217
+  defaultDisplayCurrency: string; // ISO 4217, for balance summaries
+  theme: "light" | "dark" | "system"; // default: 'system'
+  currentUserEmail?: string; // email of "me" for balance calculations
 }
 ```
 
-When user tries to create a new entry anywhere, by default use the `lastUsedCurrency` which user can switch to something else. If user successfully creates a new entry then we update the `lastUsedCurrency`.
+- `lastUsedCurrency`: When user tries to create a new entry anywhere, by default use the `lastUsedCurrency` which user can switch to something else. If user successfully creates a new entry then we update the `lastUsedCurrency`.
+- `defaultDisplayCurrency`: The currency used to display balance summaries on Dashboard. All balances are converted to this currency for the overall "you owe" / "owed to you" totals. User can change this in Settings.
+- `theme`: User's preferred color scheme.
+- `currentUserEmail`: The user marked as "me" via "Set as Me" button. Used to show personalized balance views ("you owe" vs "owed to you").
 
 ---
 
