@@ -349,6 +349,7 @@ export function RecordsPage() {
         <RecordList
           records={filteredRecords}
           users={users || []}
+          currentUserEmail={settings?.currentUserEmail}
           onEdit={handleEdit}
           onDelete={handleDelete}
         />
