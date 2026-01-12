@@ -372,7 +372,8 @@ export function DashboardPage() {
               const isExpanded = expandedGroup === group.uuid
               const hasActivity = groupBalance.owedBy.length > 0 || groupBalance.owes.length > 0
 
-              if (!hasActivity && !group.isDefault) return null
+              // Only show groups where user has a non-zero balance (owes or is owed)
+              if (Math.abs(groupNet) < 0.01) return null
 
               return (
                 <div

@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, generateUUID, now } from '../db'
-import type { Group } from '../types'
+import type { Group, ExchangeRates } from '../types'
 import { DEFAULT_GROUP_UUID } from '../types'
 import { UserPicker } from '../components/UserPicker'
+import { calculateBalancesByGroup, formatAmount } from '../utils/balanceCalculator'
+import { getExchangeRates, convertAmount } from '../utils/currencyConverter'
 
 export function GroupsPage() {
   const [showForm, setShowForm] = useState(false)
@@ -11,9 +13,56 @@ export function GroupsPage() {
   const [name, setName] = useState('')
   const [members, setMembers] = useState<string[]>([])
   const [error, setError] = useState('')
+  const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(null)
 
   const groups = useLiveQuery(() => db.groups.toArray())
   const users = useLiveQuery(() => db.users.toArray())
+  const records = useLiveQuery(() => db.records.toArray())
+  const settings = useLiveQuery(() => db.settings.get('main'))
+
+  const currentUserEmail = settings?.currentUserEmail
+  const displayCurrency = settings?.defaultDisplayCurrency || 'INR'
+
+  // Fetch exchange rates
+  useEffect(() => {
+    getExchangeRates().then(setExchangeRates)
+  }, [])
+
+  // Calculate balances by group for current user
+  const balancesByGroup = currentUserEmail && records
+    ? calculateBalancesByGroup(records, currentUserEmail)
+    : new Map()
+
+  // Helper to convert amount to display currency
+  const convertToDisplayCurrency = useCallback(
+    (amount: number, fromCurrency: string): number => {
+      if (!exchangeRates || fromCurrency === displayCurrency) return amount
+      return convertAmount(amount, fromCurrency, displayCurrency, exchangeRates)
+    },
+    [exchangeRates, displayCurrency]
+  )
+
+  // Calculate group balance summary
+  const getGroupBalanceSummary = (groupId: string) => {
+    const balance = balancesByGroup.get(groupId)
+    if (!balance) return { net: 0, hasActivity: false }
+
+    const owed = balance.owedBy.reduce(
+      (sum: number, d: { email: string; amount: number; currency: string }) =>
+        sum + convertToDisplayCurrency(d.amount, d.currency),
+      0
+    )
+    const owes = balance.owes.reduce(
+      (sum: number, d: { email: string; amount: number; currency: string }) =>
+        sum + convertToDisplayCurrency(d.amount, d.currency),
+      0
+    )
+
+    return {
+      net: owed - owes,
+      hasActivity: balance.owedBy.length > 0 || balance.owes.length > 0,
+    }
+  }
 
   const resetForm = () => {
     setName('')
@@ -172,69 +221,101 @@ export function GroupsPage() {
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {groups.map((group) => (
-            <div
-              key={group.uuid}
-              className={`rounded-2xl border p-4 transition-all ${
-                group.isDefault
-                  ? 'border-primary/30 bg-primary-light'
-                  : 'border-border-default bg-surface hover:border-content-tertiary'
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex min-w-0 flex-1 items-center gap-3">
-                  <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-surface-tertiary text-xl">
-                    {group.isDefault ? '📁' : '👥'}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="truncate font-medium text-content">{group.name}</p>
-                      {group.isDefault && (
-                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                          Default
-                        </span>
-                      )}
+          {groups.map((group) => {
+            const balanceSummary = getGroupBalanceSummary(group.uuid)
+            return (
+              <div
+                key={group.uuid}
+                className={`rounded-2xl border p-4 transition-all ${
+                  group.isDefault
+                    ? 'border-primary/30 bg-primary-light'
+                    : 'border-border-default bg-surface hover:border-content-tertiary'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-surface-tertiary text-xl">
+                      {group.isDefault ? '📁' : '👥'}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate font-medium text-content">{group.name}</p>
+                        {group.isDefault && (
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                            Default
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-content-secondary">
+                        {group.isDefault
+                          ? 'For ungrouped expenses'
+                          : group.members.length === 0
+                            ? 'No members'
+                            : `${group.members.length} ${group.members.length === 1 ? 'member' : 'members'}`}
+                      </p>
                     </div>
-                    <p className="text-sm text-content-secondary">
-                      {group.isDefault
-                        ? 'For ungrouped expenses'
-                        : group.members.length === 0
-                          ? 'No members'
-                          : `${group.members.length} ${group.members.length === 1 ? 'member' : 'members'}`}
-                    </p>
                   </div>
+                  {!group.isDefault && (
+                    <div className="flex flex-shrink-0 gap-1">
+                      <button
+                        onClick={() => handleEdit(group)}
+                        className="rounded-lg px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary-light"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDelete(group.uuid)}
+                        className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
-                {!group.isDefault && (
-                  <div className="flex flex-shrink-0 gap-1">
-                    <button
-                      onClick={() => handleEdit(group)}
-                      className="rounded-lg px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary-light"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(group.uuid)}
-                      className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
-                    >
-                      Delete
-                    </button>
+
+                {/* Balance Summary */}
+                {currentUserEmail && (
+                  <div className="mt-3 border-t border-border-default pt-3">
+                    {!balanceSummary.hasActivity ? (
+                      <p className="text-sm text-content-tertiary">No activity</p>
+                    ) : Math.abs(balanceSummary.net) < 0.01 ? (
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">✓</span>
+                        <span className="text-sm font-medium text-content-secondary">Settled</span>
+                      </div>
+                    ) : balanceSummary.net > 0 ? (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-green-700 dark:text-green-400">You get back</span>
+                        <span className="font-semibold text-green-600 dark:text-green-400">
+                          {formatAmount(balanceSummary.net, displayCurrency)}
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-red-700 dark:text-red-400">You owe</span>
+                        <span className="font-semibold text-red-600 dark:text-red-400">
+                          {formatAmount(Math.abs(balanceSummary.net), displayCurrency)}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {!group.isDefault && group.members.length > 0 && (
+                  <div className="mt-3 flex flex-wrap gap-1 border-t border-border-default pt-3">
+                    {group.members.map((email) => (
+                      <span
+                        key={email}
+                        className="rounded-lg bg-surface-tertiary px-2 py-1 text-xs text-content-secondary"
+                      >
+                        {getUserAlias(email)}
+                      </span>
+                    ))}
                   </div>
                 )}
               </div>
-              {!group.isDefault && group.members.length > 0 && (
-                <div className="mt-3 flex flex-wrap gap-1 border-t border-border-default pt-3">
-                  {group.members.map((email) => (
-                    <span
-                      key={email}
-                      className="rounded-lg bg-surface-tertiary px-2 py-1 text-xs text-content-secondary"
-                    >
-                      {getUserAlias(email)}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
