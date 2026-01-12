@@ -37,7 +37,7 @@ Each milestone ends with a **review gate**. No proceeding to next milestone with
   - [x] Create group
   - [x] Edit group (name, members)
   - [x] Delete group
-  - [ ] Default group handling
+  - [x] Default group handling
 
 ### Deliverable
 

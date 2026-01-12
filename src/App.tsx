@@ -5,12 +5,17 @@ import { RecordsPage } from './pages/RecordsPage'
 import { UsersPage } from './pages/UsersPage'
 import { GroupsPage } from './pages/GroupsPage'
 import { SettingsPage } from './pages/SettingsPage'
-import { initializeSettings } from './db'
+import { initializeSettings, initializeDefaultGroup, migrateUngroupedRecords } from './db'
 import { ThemeProvider } from './hooks/useTheme'
 
 function App() {
   useEffect(() => {
-    initializeSettings()
+    const init = async () => {
+      await initializeSettings()
+      await initializeDefaultGroup()
+      await migrateUngroupedRecords()
+    }
+    init()
   }, [])
 
   return (

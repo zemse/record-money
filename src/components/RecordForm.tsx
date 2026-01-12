@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { ExpenseRecord, User, Group, ShareType, Participant } from '../types'
+import { DEFAULT_GROUP_UUID } from '../types'
 import { UserPicker } from './UserPicker'
 import { addUser } from '../db'
 
@@ -35,7 +36,7 @@ export function RecordForm({ initialData, users, groups, onSubmit, onCancel }: R
   const [time, setTime] = useState(initialData.time)
   const [category, setCategory] = useState(initialData.category)
   const [icon, setIcon] = useState(initialData.icon)
-  const [groupId, setGroupId] = useState<string | null>(initialData.groupId)
+  const [groupId, setGroupId] = useState<string>(initialData.groupId || DEFAULT_GROUP_UUID)
   const [shareType, setShareType] = useState<ShareType>(initialData.shareType)
   const [paidByEmails, setPaidByEmails] = useState<string[]>(initialData.paidBy.map((p) => p.email))
   const [paidForEmails, setPaidForEmails] = useState<string[]>(
@@ -195,23 +196,20 @@ export function RecordForm({ initialData, users, groups, onSubmit, onCancel }: R
         </div>
       </div>
 
-      {groups.length > 0 && (
-        <div>
-          <label className={labelClassName}>Group (Optional)</label>
-          <select
-            value={groupId || ''}
-            onChange={(e) => setGroupId(e.target.value || null)}
-            className={inputClassName}
-          >
-            <option value="">No Group</option>
-            {groups.map((g) => (
-              <option key={g.uuid} value={g.uuid}>
-                {g.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+      <div>
+        <label className={labelClassName}>Group</label>
+        <select
+          value={groupId}
+          onChange={(e) => setGroupId(e.target.value)}
+          className={inputClassName}
+        >
+          {groups.map((g) => (
+            <option key={g.uuid} value={g.uuid}>
+              {g.name}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <div>
         <label className={labelClassName}>Paid By</label>

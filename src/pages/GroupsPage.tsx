@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, generateUUID, now } from '../db'
 import type { Group } from '../types'
+import { DEFAULT_GROUP_UUID } from '../types'
 import { UserPicker } from '../components/UserPicker'
 
 export function GroupsPage() {
@@ -56,6 +57,7 @@ export function GroupsPage() {
   }
 
   const handleEdit = (group: Group) => {
+    if (group.isDefault) return // Cannot edit default group
     setEditingGroup(group)
     setName(group.name)
     setMembers(group.members)
@@ -63,6 +65,7 @@ export function GroupsPage() {
   }
 
   const handleDelete = async (uuid: string) => {
+    if (uuid === DEFAULT_GROUP_UUID) return // Cannot delete default group
     if (window.confirm('Are you sure you want to delete this group?')) {
       await db.groups.delete(uuid)
     }
@@ -172,38 +175,53 @@ export function GroupsPage() {
           {groups.map((group) => (
             <div
               key={group.uuid}
-              className="rounded-2xl border border-border-default bg-surface p-4 transition-all hover:border-content-tertiary"
+              className={`rounded-2xl border p-4 transition-all ${
+                group.isDefault
+                  ? 'border-primary/30 bg-primary-light'
+                  : 'border-border-default bg-surface hover:border-content-tertiary'
+              }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="flex min-w-0 flex-1 items-center gap-3">
                   <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-surface-tertiary text-xl">
-                    👥
+                    {group.isDefault ? '📁' : '👥'}
                   </span>
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-content">{group.name}</p>
+                    <div className="flex items-center gap-2">
+                      <p className="truncate font-medium text-content">{group.name}</p>
+                      {group.isDefault && (
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                          Default
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-content-secondary">
-                      {group.members.length === 0
-                        ? 'No members'
-                        : `${group.members.length} ${group.members.length === 1 ? 'member' : 'members'}`}
+                      {group.isDefault
+                        ? 'For ungrouped expenses'
+                        : group.members.length === 0
+                          ? 'No members'
+                          : `${group.members.length} ${group.members.length === 1 ? 'member' : 'members'}`}
                     </p>
                   </div>
                 </div>
-                <div className="flex flex-shrink-0 gap-1">
-                  <button
-                    onClick={() => handleEdit(group)}
-                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary-light"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(group.uuid)}
-                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
-                  >
-                    Delete
-                  </button>
-                </div>
+                {!group.isDefault && (
+                  <div className="flex flex-shrink-0 gap-1">
+                    <button
+                      onClick={() => handleEdit(group)}
+                      className="rounded-lg px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary-light"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDelete(group.uuid)}
+                      className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
               </div>
-              {group.members.length > 0 && (
+              {!group.isDefault && group.members.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1 border-t border-border-default pt-3">
                   {group.members.map((email) => (
                     <span

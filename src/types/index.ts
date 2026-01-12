@@ -34,9 +34,13 @@ export interface Group {
   uuid: string
   name: string
   members: string[] // emails
+  isDefault?: boolean // true for the built-in default group
   createdAt: number
   updatedAt: number
 }
+
+// Default group constant UUID
+export const DEFAULT_GROUP_UUID = 'default-group'
 
 export type Theme = 'light' | 'dark' | 'system'
 

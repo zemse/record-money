@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, generateUUID, now, getCurrentDate, getCurrentTime } from '../db'
 import type { ExpenseRecord, ShareType } from '../types'
+import { DEFAULT_GROUP_UUID } from '../types'
 import { RecordForm } from '../components/RecordForm'
 import { RecordList } from '../components/RecordList'
 
@@ -74,7 +75,7 @@ export function RecordsPage() {
     paidBy: [],
     paidFor: [],
     shareType: 'equal' as ShareType,
-    groupId: null,
+    groupId: DEFAULT_GROUP_UUID,
     comments: '',
   }
 

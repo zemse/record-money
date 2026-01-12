@@ -1,5 +1,6 @@
 import Dexie, { type EntityTable } from 'dexie'
 import type { ExpenseRecord, User, Group, Settings } from '../types'
+import { DEFAULT_GROUP_UUID } from '../types'
 
 const db = new Dexie('RecordMoney') as Dexie & {
   records: EntityTable<ExpenseRecord, 'uuid'>
@@ -73,6 +74,38 @@ export async function initializeSettings(): Promise<void> {
       theme: 'system',
     })
   }
+}
+
+// Initialize default group if not exists
+export async function initializeDefaultGroup(): Promise<void> {
+  const defaultGroup = await db.groups.get(DEFAULT_GROUP_UUID)
+  if (!defaultGroup) {
+    const timestamp = now()
+    await db.groups.add({
+      uuid: DEFAULT_GROUP_UUID,
+      name: 'Ungrouped',
+      members: [],
+      isDefault: true,
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    })
+  }
+}
+
+// Migrate records with null groupId to default group
+export async function migrateUngroupedRecords(): Promise<void> {
+  const ungroupedRecords = await db.records.where('groupId').equals('').toArray()
+  const nullGroupRecords = await db.records.filter((r) => r.groupId === null).toArray()
+  const allUngrouped = [...ungroupedRecords, ...nullGroupRecords]
+
+  for (const record of allUngrouped) {
+    await db.records.update(record.uuid, { groupId: DEFAULT_GROUP_UUID })
+  }
+}
+
+// Get default group
+export async function getDefaultGroup(): Promise<Group | undefined> {
+  return db.groups.get(DEFAULT_GROUP_UUID)
 }
 
 // Add a new user
