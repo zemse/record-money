@@ -11,9 +11,9 @@ Decentralized expense tracking and splitting app. All data stored client-side (I
 
 ## Platforms
 
-| Platform          | Status            |
-| ----------------- | ----------------- |
-| Web app (Netlify) | PoC - In Progress |
+| Platform         | Status            |
+| ---------------- | ----------------- |
+| Web app (Vercel) | PoC - In Progress |
 | iOS app           | Future            |
 | Android app       | Future            |
 
@@ -25,7 +25,7 @@ Decentralized expense tracking and splitting app. All data stored client-side (I
 | Storage   | IndexedDB (via Dexie.js or idb) |
 | Styling   | Tailwind CSS                    |
 | PWA       | Workbox (service worker)        |
-| Hosting   | Netlify                         |
+| Hosting   | Vercel                          |
 | AI        | Claude API (user-provided key)  |
 
 ## Spec Documents

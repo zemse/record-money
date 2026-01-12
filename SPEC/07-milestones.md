@@ -167,7 +167,7 @@ Users can share expenses via links (small) or files (large).
 - [ ] Add to Home Screen
   - [ ] Test on iOS Safari
   - [ ] Test on Android Chrome
-- [x] Netlify deployment
+- [x] Vercel deployment
   - [x] Build configuration
   - [ ] Deploy preview
   - [ ] Production deploy
