@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, normalizeEmail, updateSettings } from '../db'
+import { db, normalizeEmail, updateSettings, changeUserEmail } from '../db'
 import type { User } from '../types'
+import { ProgressModal } from '../components/ProgressModal'
 
 export function UsersPage() {
   const [showForm, setShowForm] = useState(false)
@@ -9,6 +10,11 @@ export function UsersPage() {
   const [email, setEmail] = useState('')
   const [alias, setAlias] = useState('')
   const [error, setError] = useState('')
+
+  // Progress modal state
+  const [showProgress, setShowProgress] = useState(false)
+  const [progressCurrent, setProgressCurrent] = useState(0)
+  const [progressTotal, setProgressTotal] = useState(0)
 
   const users = useLiveQuery(() => db.users.toArray())
   const settings = useLiveQuery(() => db.settings.get('main'))
@@ -43,7 +49,46 @@ export function UsersPage() {
 
     try {
       if (editingUser) {
-        await db.users.update(editingUser.email, { alias: alias.trim() })
+        // Check if email has changed
+        const emailChanged = normalizedEmail !== editingUser.email
+
+        if (emailChanged) {
+          // Confirm email change
+          const confirmed = window.confirm(
+            `Changing email from "${editingUser.email}" to "${normalizedEmail}" will update all records, groups, and settings. This may take a moment. Continue?`
+          )
+
+          if (!confirmed) return
+
+          // Show progress modal
+          setShowProgress(true)
+          setProgressCurrent(0)
+          setProgressTotal(0)
+
+          const result = await changeUserEmail(
+            editingUser.email,
+            normalizedEmail,
+            (current, total) => {
+              setProgressCurrent(current)
+              setProgressTotal(total)
+            }
+          )
+
+          setShowProgress(false)
+
+          if (!result.success) {
+            setError(result.error || 'Failed to change email')
+            return
+          }
+
+          // Update alias if changed
+          if (alias.trim() !== editingUser.alias) {
+            await db.users.update(normalizedEmail, { alias: alias.trim() })
+          }
+        } else {
+          // Only alias changed
+          await db.users.update(editingUser.email, { alias: alias.trim() })
+        }
       } else {
         // Check if user already exists
         const existing = await db.users.get(normalizedEmail)
@@ -59,6 +104,7 @@ export function UsersPage() {
       }
       resetForm()
     } catch {
+      setShowProgress(false)
       setError('Failed to save user')
     }
   }
@@ -100,10 +146,14 @@ export function UsersPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                disabled={!!editingUser}
                 className={inputClassName}
                 placeholder="user@example.com"
               />
+              {editingUser && (
+                <p className="mt-1 text-xs text-content-tertiary">
+                  Changing email will update all records and groups
+                </p>
+              )}
             </div>
 
             <div>
@@ -236,6 +286,15 @@ export function UsersPage() {
             )
           })}
         </div>
+      )}
+
+      {/* Progress Modal */}
+      {showProgress && (
+        <ProgressModal
+          message="Updating email..."
+          current={progressCurrent}
+          total={progressTotal}
+        />
       )}
     </div>
   )

@@ -168,3 +168,119 @@ export async function addUser(
 
   return { success: true, email: normalizedEmail }
 }
+
+// Change a user's email and update all references
+export async function changeUserEmail(
+  oldEmail: string,
+  newEmail: string,
+  onProgress?: (current: number, total: number) => void
+): Promise<{ success: boolean; error?: string }> {
+  const normalizedOld = normalizeEmail(oldEmail)
+  const normalizedNew = normalizeEmail(newEmail)
+
+  if (normalizedOld === normalizedNew) {
+    return { success: true } // No change needed
+  }
+
+  if (!normalizedNew) {
+    return { success: false, error: 'New email is required' }
+  }
+
+  // Check if new email already exists
+  const existing = await db.users.get(normalizedNew)
+  if (existing) {
+    return { success: false, error: 'Email already in use by another user' }
+  }
+
+  // Get user to preserve alias
+  const user = await db.users.get(normalizedOld)
+  if (!user) {
+    return { success: false, error: 'User not found' }
+  }
+
+  // Get all data that needs updating
+  const records = await db.records.toArray()
+  const groups = await db.groups.toArray()
+  const settings = await db.settings.get('main')
+
+  // Calculate total operations for progress tracking
+  let total = 0
+  let current = 0
+
+  // Count records that need updating
+  for (const record of records) {
+    const hasPaidBy = record.paidBy.some((p) => p.email === normalizedOld)
+    const hasPaidFor = record.paidFor.some((p) => p.email === normalizedOld)
+    if (hasPaidBy || hasPaidFor) total++
+  }
+
+  // Count groups that need updating
+  for (const group of groups) {
+    if (group.members.includes(normalizedOld)) total++
+  }
+
+  // Count settings update if needed
+  if (settings?.currentUserEmail === normalizedOld) total++
+
+  // Add 2 for delete old + add new user
+  total += 2
+
+  // Update records
+  for (const record of records) {
+    const hasPaidBy = record.paidBy.some((p) => p.email === normalizedOld)
+    const hasPaidFor = record.paidFor.some((p) => p.email === normalizedOld)
+
+    if (hasPaidBy || hasPaidFor) {
+      const newPaidBy = record.paidBy.map((p) =>
+        p.email === normalizedOld ? { ...p, email: normalizedNew } : p
+      )
+      const newPaidFor = record.paidFor.map((p) =>
+        p.email === normalizedOld ? { ...p, email: normalizedNew } : p
+      )
+
+      await db.records.update(record.uuid, {
+        paidBy: newPaidBy,
+        paidFor: newPaidFor,
+        updatedAt: now(),
+      })
+
+      current++
+      onProgress?.(current, total)
+    }
+  }
+
+  // Update groups
+  for (const group of groups) {
+    if (group.members.includes(normalizedOld)) {
+      const newMembers = group.members.map((m) =>
+        m === normalizedOld ? normalizedNew : m
+      )
+      await db.groups.update(group.uuid, {
+        members: newMembers,
+        updatedAt: now(),
+      })
+
+      current++
+      onProgress?.(current, total)
+    }
+  }
+
+  // Update settings if this user is "Me"
+  if (settings?.currentUserEmail === normalizedOld) {
+    await db.settings.update('main', { currentUserEmail: normalizedNew })
+    current++
+    onProgress?.(current, total)
+  }
+
+  // Delete old user
+  await db.users.delete(normalizedOld)
+  current++
+  onProgress?.(current, total)
+
+  // Add new user with same alias
+  await db.users.add({ email: normalizedNew, alias: user.alias })
+  current++
+  onProgress?.(current, total)
+
+  return { success: true }
+}
