@@ -16,6 +16,9 @@ export function UsersPage() {
   const [progressCurrent, setProgressCurrent] = useState(0)
   const [progressTotal, setProgressTotal] = useState(0)
 
+  // Menu state
+  const [openMenuEmail, setOpenMenuEmail] = useState<string | null>(null)
+
   const users = useLiveQuery(() => db.users.toArray())
   const settings = useLiveQuery(() => db.settings.get('main'))
 
@@ -260,27 +263,61 @@ export function UsersPage() {
                     </div>
                   </div>
                 </div>
-                <div className="mt-3 flex justify-end gap-1 border-t border-border-default pt-3">
-                  {!isMe && (
+                <div className="mt-3 flex justify-end border-t border-border-default pt-3">
+                  <div className="relative">
                     <button
-                      onClick={() => handleSetAsMe(user.email)}
-                      className="rounded-lg px-3 py-1.5 text-sm font-medium text-green-600 transition-colors hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-500/10"
+                      onClick={() =>
+                        setOpenMenuEmail(openMenuEmail === user.email ? null : user.email)
+                      }
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-content-secondary transition-colors hover:bg-surface-tertiary"
                     >
-                      Set as Me
+                      <span className="text-lg">⋯</span>
                     </button>
-                  )}
-                  <button
-                    onClick={() => handleEdit(user)}
-                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary-light"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleDelete(user.email)}
-                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
-                  >
-                    Delete
-                  </button>
+
+                    {openMenuEmail === user.email && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={() => setOpenMenuEmail(null)}
+                        />
+                        <div className="absolute right-0 bottom-full z-20 mb-1 w-40 rounded-xl border border-border-default bg-surface p-2 shadow-lg">
+                          {!isMe && (
+                            <button
+                              onClick={() => {
+                                setOpenMenuEmail(null)
+                                handleSetAsMe(user.email)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-500/10"
+                            >
+                              <span>👤</span>
+                              <span>Set as Me</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              setOpenMenuEmail(null)
+                              handleEdit(user)
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
+                          >
+                            <span>✏️</span>
+                            <span>Edit</span>
+                          </button>
+                          <div className="my-1 border-t border-border-default" />
+                          <button
+                            onClick={() => {
+                              setOpenMenuEmail(null)
+                              handleDelete(user.email)
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+                          >
+                            <span>🗑️</span>
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             )

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { ExpenseRecord, User } from '../types'
 
 interface RecordListProps {
@@ -17,6 +18,7 @@ export function RecordList({
   onDelete,
   onShare,
 }: RecordListProps) {
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null)
   const getUserAlias = (email: string) => {
     const user = users.find((u) => u.email === email)
     return user?.alias || email
@@ -132,36 +134,68 @@ export function RecordList({
                       <p className="text-xs text-content-tertiary">{record.time}</p>
                     </div>
                   </div>
-                  <div className="mt-3 flex justify-end gap-1 border-t border-border-default pt-3">
-                    {onShare && (
+                  <div className="mt-3 flex justify-end border-t border-border-default pt-3">
+                    <div className="relative">
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
-                          onShare(record)
+                          setOpenMenuId(openMenuId === record.uuid ? null : record.uuid)
                         }}
-                        className="rounded-lg px-3 py-1.5 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-tertiary"
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-content-secondary transition-colors hover:bg-surface-tertiary"
                       >
-                        Share
+                        <span className="text-lg">⋯</span>
                       </button>
-                    )}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onEdit(record)
-                      }}
-                      className="rounded-lg px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary-light"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onDelete(record.uuid)
-                      }}
-                      className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
-                    >
-                      Delete
-                    </button>
+
+                      {openMenuId === record.uuid && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-10"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setOpenMenuId(null)
+                            }}
+                          />
+                          <div className="absolute right-0 bottom-full z-20 mb-1 w-40 rounded-xl border border-border-default bg-surface p-2 shadow-lg">
+                            {onShare && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setOpenMenuId(null)
+                                  onShare(record)
+                                }}
+                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
+                              >
+                                <span>🔗</span>
+                                <span>Share</span>
+                              </button>
+                            )}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setOpenMenuId(null)
+                                onEdit(record)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
+                            >
+                              <span>✏️</span>
+                              <span>Edit</span>
+                            </button>
+                            <div className="my-1 border-t border-border-default" />
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setOpenMenuId(null)
+                                onDelete(record.uuid)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+                            >
+                              <span>🗑️</span>
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               )
