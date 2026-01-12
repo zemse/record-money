@@ -1,0 +1,74 @@
+import Dexie, { type EntityTable } from 'dexie'
+import type { ExpenseRecord, User, Group, Settings } from '../types'
+
+const db = new Dexie('RecordMoney') as Dexie & {
+  records: EntityTable<ExpenseRecord, 'uuid'>
+  users: EntityTable<User, 'email'>
+  groups: EntityTable<Group, 'uuid'>
+  settings: EntityTable<Settings, 'key'>
+}
+
+db.version(1).stores({
+  records: 'uuid, groupId, date, category, sourceHash',
+  users: 'email',
+  groups: 'uuid',
+  settings: 'key',
+})
+
+export { db }
+
+// Helper to generate UUID
+export function generateUUID(): string {
+  return crypto.randomUUID()
+}
+
+// Email normalization
+export function normalizeEmail(email: string): string {
+  return email.toLowerCase().trim()
+}
+
+// Get current timestamp
+export function now(): number {
+  return Date.now()
+}
+
+// Get current date in YYYY-MM-DD format
+export function getCurrentDate(): string {
+  return new Date().toISOString().split('T')[0]
+}
+
+// Get current time in HH:MM format
+export function getCurrentTime(): string {
+  return new Date().toTimeString().slice(0, 5)
+}
+
+// Settings helpers
+export async function getSettings(): Promise<Settings | undefined> {
+  return db.settings.get('main')
+}
+
+export async function updateSettings(updates: Partial<Omit<Settings, 'key'>>): Promise<void> {
+  const existing = await getSettings()
+  if (existing) {
+    await db.settings.update('main', updates)
+  } else {
+    await db.settings.add({
+      key: 'main',
+      autoApplyAiChanges: false,
+      lastUsedCurrency: 'INR',
+      ...updates,
+    })
+  }
+}
+
+// Initialize default settings if not exists
+export async function initializeSettings(): Promise<void> {
+  const settings = await getSettings()
+  if (!settings) {
+    await db.settings.add({
+      key: 'main',
+      autoApplyAiChanges: false,
+      lastUsedCurrency: 'INR',
+    })
+  }
+}

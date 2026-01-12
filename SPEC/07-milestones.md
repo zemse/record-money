@@ -10,33 +10,33 @@ Each milestone ends with a **review gate**. No proceeding to next milestone with
 
 ### Tasks
 
-- [ ] Project setup
-  - [ ] Vite + React + TypeScript
-  - [ ] Tailwind CSS
-  - [ ] ESLint + Prettier
-  - [ ] Folder structure
-- [ ] IndexedDB setup
-  - [ ] Dexie.js integration
-  - [ ] Schema definition (records, users, groups, settings)
-  - [ ] Basic CRUD helpers
-- [ ] UI shell
-  - [ ] Navigation (bottom tabs or sidebar)
-  - [ ] Empty states
-  - [ ] Basic routing (react-router)
-- [ ] Records CRUD
-  - [ ] Add record form
-  - [ ] Edit record
-  - [ ] Delete record (with confirmation)
-  - [ ] Record list view
-- [ ] Users CRUD
-  - [ ] Add user (email + alias)
-  - [ ] Edit alias
-  - [ ] Delete user
-  - [ ] User picker component (for paidBy/paidFor)
-- [ ] Groups CRUD
-  - [ ] Create group
-  - [ ] Edit group (name, members)
-  - [ ] Delete group
+- [x] Project setup
+  - [x] Vite + React + TypeScript
+  - [x] Tailwind CSS
+  - [x] ESLint + Prettier
+  - [x] Folder structure
+- [x] IndexedDB setup
+  - [x] Dexie.js integration
+  - [x] Schema definition (records, users, groups, settings)
+  - [x] Basic CRUD helpers
+- [x] UI shell
+  - [x] Navigation (bottom tabs or sidebar)
+  - [x] Empty states
+  - [x] Basic routing (react-router)
+- [x] Records CRUD
+  - [x] Add record form
+  - [x] Edit record
+  - [x] Delete record (with confirmation)
+  - [x] Record list view
+- [x] Users CRUD
+  - [x] Add user (email + alias)
+  - [x] Edit alias
+  - [x] Delete user
+  - [x] User picker component (for paidBy/paidFor)
+- [x] Groups CRUD
+  - [x] Create group
+  - [x] Edit group (name, members)
+  - [x] Delete group
   - [ ] Default group handling
 
 ### Deliverable
