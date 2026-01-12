@@ -141,8 +141,8 @@ Users can share expenses via links (small) or files (large).
 
 ### Review Gate
 
-- [ ] Test import/export round-trip
-- [ ] Test dedup scenarios
+- [x] Test import/export round-trip
+- [x] Test dedup scenarios
 - [ ] Approval to proceed
 
 ---
