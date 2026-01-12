@@ -107,38 +107,43 @@ export function RecordForm({ initialData, users, groups, onSubmit, onCancel }: R
     })
   }
 
+  const inputClassName =
+    'mt-1 block w-full rounded-xl border border-border-default bg-surface px-3 py-2.5 text-content shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary'
+
+  const labelClassName = 'block text-sm font-medium text-content'
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-5">
       <div>
-        <label className="block text-sm font-medium text-gray-700">Title</label>
+        <label className={labelClassName}>Title</label>
         <input
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          className={inputClassName}
           placeholder="Dinner at restaurant"
         />
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Amount</label>
+          <label className={labelClassName}>Amount</label>
           <input
             type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className={inputClassName}
             placeholder="0.00"
             step="0.01"
             min="0"
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Currency</label>
+          <label className={labelClassName}>Currency</label>
           <select
             value={currency}
             onChange={(e) => setCurrency(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className={inputClassName}
           >
             {CURRENCIES.map((c) => (
               <option key={c} value={c}>
@@ -151,37 +156,37 @@ export function RecordForm({ initialData, users, groups, onSubmit, onCancel }: R
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700">Date</label>
+          <label className={labelClassName}>Date</label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className={inputClassName}
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700">Time</label>
+          <label className={labelClassName}>Time</label>
           <input
             type="time"
             value={time}
             onChange={(e) => setTime(e.target.value)}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className={inputClassName}
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Category</label>
-        <div className="mt-1 flex flex-wrap gap-2">
+        <label className={labelClassName}>Category</label>
+        <div className="mt-2 flex flex-wrap gap-2">
           {CATEGORIES.map((cat) => (
             <button
               key={cat.name}
               type="button"
               onClick={() => handleCategorySelect(cat)}
-              className={`rounded-full px-3 py-1 text-sm ${
+              className={`rounded-xl px-3 py-2 text-sm font-medium transition-all ${
                 category === cat.name
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-surface-tertiary text-content-secondary hover:bg-surface-hover'
               }`}
             >
               {cat.icon} {cat.name}
@@ -192,11 +197,11 @@ export function RecordForm({ initialData, users, groups, onSubmit, onCancel }: R
 
       {groups.length > 0 && (
         <div>
-          <label className="block text-sm font-medium text-gray-700">Group (Optional)</label>
+          <label className={labelClassName}>Group (Optional)</label>
           <select
             value={groupId || ''}
             onChange={(e) => setGroupId(e.target.value || null)}
-            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+            className={inputClassName}
           >
             <option value="">No Group</option>
             {groups.map((g) => (
@@ -209,35 +214,39 @@ export function RecordForm({ initialData, users, groups, onSubmit, onCancel }: R
       )}
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Paid By</label>
-        <UserPicker
-          users={users}
-          selected={paidByEmails}
-          onChange={setPaidByEmails}
-          multiple
-          placeholder="Select who paid..."
-          onAddUser={handleAddUser}
-        />
+        <label className={labelClassName}>Paid By</label>
+        <div className="mt-1">
+          <UserPicker
+            users={users}
+            selected={paidByEmails}
+            onChange={setPaidByEmails}
+            multiple
+            placeholder="Select who paid..."
+            onAddUser={handleAddUser}
+          />
+        </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Paid For</label>
-        <UserPicker
-          users={users}
-          selected={paidForEmails}
-          onChange={setPaidForEmails}
-          multiple
-          placeholder="Select who this is for..."
-          onAddUser={handleAddUser}
-        />
+        <label className={labelClassName}>Paid For</label>
+        <div className="mt-1">
+          <UserPicker
+            users={users}
+            selected={paidForEmails}
+            onChange={setPaidForEmails}
+            multiple
+            placeholder="Select who this is for..."
+            onAddUser={handleAddUser}
+          />
+        </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Split Type</label>
+        <label className={labelClassName}>Split Type</label>
         <select
           value={shareType}
           onChange={(e) => setShareType(e.target.value as ShareType)}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          className={inputClassName}
         >
           <option value="equal">Equal Split</option>
           <option value="percentage">By Percentage</option>
@@ -247,40 +256,44 @@ export function RecordForm({ initialData, users, groups, onSubmit, onCancel }: R
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Description</label>
+        <label className={labelClassName}>Description</label>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          className={inputClassName}
           placeholder="Optional description..."
           rows={2}
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700">Comments</label>
+        <label className={labelClassName}>Comments</label>
         <textarea
           value={comments}
           onChange={(e) => setComments(e.target.value)}
-          className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+          className={inputClassName}
           placeholder="Additional notes..."
           rows={2}
         />
       </div>
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && (
+        <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-500/10 dark:text-red-400">
+          {error}
+        </div>
+      )}
 
-      <div className="flex gap-2">
+      <div className="flex gap-3 pt-2">
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 rounded-md border border-gray-300 px-4 py-2 hover:bg-gray-50"
+          className="flex-1 rounded-xl border border-border-default bg-surface px-4 py-2.5 font-medium text-content transition-colors hover:bg-surface-tertiary"
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="flex-1 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+          className="flex-1 rounded-xl bg-primary px-4 py-2.5 font-medium text-white shadow-sm transition-all hover:bg-primary-hover hover:shadow-md"
         >
           Save
         </button>

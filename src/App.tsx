@@ -6,6 +6,7 @@ import { UsersPage } from './pages/UsersPage'
 import { GroupsPage } from './pages/GroupsPage'
 import { SettingsPage } from './pages/SettingsPage'
 import { initializeSettings } from './db'
+import { ThemeProvider } from './hooks/useTheme'
 
 function App() {
   useEffect(() => {
@@ -13,16 +14,18 @@ function App() {
   }, [])
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<RecordsPage />} />
-          <Route path="users" element={<UsersPage />} />
-          <Route path="groups" element={<GroupsPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Layout />}>
+            <Route index element={<RecordsPage />} />
+            <Route path="users" element={<UsersPage />} />
+            <Route path="groups" element={<GroupsPage />} />
+            <Route path="settings" element={<SettingsPage />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
   )
 }
 

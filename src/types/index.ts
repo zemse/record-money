@@ -38,9 +38,12 @@ export interface Group {
   updatedAt: number
 }
 
+export type Theme = 'light' | 'dark' | 'system'
+
 export interface Settings {
   key: string // 'main' - single row key
   claudeApiKey?: string // stored locally
   autoApplyAiChanges: boolean // default: false
   lastUsedCurrency: string // ISO 4217
+  theme: Theme // default: 'system'
 }

@@ -56,6 +56,7 @@ export async function updateSettings(updates: Partial<Omit<Settings, 'key'>>): P
       key: 'main',
       autoApplyAiChanges: false,
       lastUsedCurrency: 'INR',
+      theme: 'system',
       ...updates,
     })
   }
@@ -69,6 +70,7 @@ export async function initializeSettings(): Promise<void> {
       key: 'main',
       autoApplyAiChanges: false,
       lastUsedCurrency: 'INR',
+      theme: 'system',
     })
   }
 }

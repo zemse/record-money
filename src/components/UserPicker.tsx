@@ -80,9 +80,9 @@ export function UserPicker({
   }
 
   return (
-    <div className="mt-1 space-y-2">
+    <div className="space-y-2">
       {selectedArray.length === 0 && !showForm && (
-        <p className="text-sm text-gray-500">{placeholder}</p>
+        <p className="text-sm text-content-secondary">{placeholder}</p>
       )}
 
       <div className="flex flex-wrap gap-2">
@@ -93,10 +93,10 @@ export function UserPicker({
               key={user.email}
               type="button"
               onClick={() => toggleUser(user.email)}
-              className={`rounded-full px-3 py-1 text-sm ${
+              className={`rounded-xl px-3 py-2 text-sm font-medium transition-all ${
                 isSelected
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'bg-surface-tertiary text-content-secondary hover:bg-surface-hover'
               }`}
             >
               {user.alias}
@@ -108,7 +108,7 @@ export function UserPicker({
           <button
             type="button"
             onClick={() => setShowForm(true)}
-            className="rounded-full border-2 border-dashed border-gray-300 px-3 py-1 text-sm text-gray-500 hover:border-indigo-400 hover:text-indigo-600"
+            className="rounded-xl border-2 border-dashed border-border-default px-3 py-2 text-sm font-medium text-content-tertiary transition-colors hover:border-primary hover:text-primary"
           >
             + Add User
           </button>
@@ -116,14 +116,14 @@ export function UserPicker({
       </div>
 
       {showForm && (
-        <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
+        <div className="rounded-xl border border-border-default bg-surface-secondary p-3">
           <div className="space-y-2">
             <input
               type="text"
               value={alias}
               onChange={(e) => setAlias(e.target.value)}
               placeholder="Name"
-              className="block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className="block w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-content shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
               autoFocus
             />
             <input
@@ -131,14 +131,14 @@ export function UserPicker({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
-              className="block w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+              className="block w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-content shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
-            {error && <p className="text-xs text-red-600">{error}</p>}
+            {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}
             <div className="flex gap-2">
               <button
                 type="button"
                 onClick={resetForm}
-                className="flex-1 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100"
+                className="flex-1 rounded-lg border border-border-default bg-surface px-3 py-2 text-sm font-medium text-content transition-colors hover:bg-surface-tertiary"
                 disabled={isSubmitting}
               >
                 Cancel
@@ -146,7 +146,7 @@ export function UserPicker({
               <button
                 type="button"
                 onClick={handleAddUser}
-                className="flex-1 rounded-md bg-indigo-600 px-3 py-1.5 text-sm text-white hover:bg-indigo-700 disabled:opacity-50"
+                className="flex-1 rounded-lg bg-primary px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:opacity-50"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? 'Adding...' : 'Add'}

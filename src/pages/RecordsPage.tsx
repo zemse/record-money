@@ -23,7 +23,6 @@ export function RecordsPage() {
       updatedAt: timestamp,
     })
 
-    // Update lastUsedCurrency in settings
     if (settings) {
       await db.settings.update('main', { lastUsedCurrency: data.currency })
     }
@@ -40,7 +39,6 @@ export function RecordsPage() {
       updatedAt: now(),
     })
 
-    // Update lastUsedCurrency in settings
     if (settings) {
       await db.settings.update('main', { lastUsedCurrency: data.currency })
     }
@@ -82,9 +80,16 @@ export function RecordsPage() {
 
   if (showForm) {
     return (
-      <div className="p-4">
-        <h1 className="mb-4 text-xl font-bold">{editingRecord ? 'Edit Record' : 'Add Record'}</h1>
-        <div className="max-w-lg">
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-content">
+            {editingRecord ? 'Edit Record' : 'New Record'}
+          </h1>
+          <p className="text-sm text-content-secondary">
+            {editingRecord ? 'Update expense details' : 'Add a new expense or income'}
+          </p>
+        </div>
+        <div className="max-w-xl">
           <RecordForm
             initialData={editingRecord || defaultValues}
             users={users || []}
@@ -104,22 +109,35 @@ export function RecordsPage() {
   }
 
   return (
-    <div className="p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold">Records</h1>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-content">Records</h1>
+          <p className="text-sm text-content-secondary">
+            {records?.length || 0} {records?.length === 1 ? 'record' : 'records'}
+          </p>
+        </div>
         <button
           onClick={() => setShowForm(true)}
-          className="rounded-full bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+          className="rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-hover hover:shadow-md"
         >
-          + Add
+          + Add Record
         </button>
       </div>
 
       {!records || records.length === 0 ? (
-        <div className="py-12 text-center text-gray-500">
-          <p className="text-4xl">📝</p>
-          <p className="mt-2">No records yet</p>
-          <p className="text-sm">Tap + Add to create your first record</p>
+        <div className="rounded-2xl border border-border-default bg-surface py-16 text-center">
+          <p className="text-5xl">📝</p>
+          <p className="mt-4 text-lg font-medium text-content">No records yet</p>
+          <p className="mt-1 text-sm text-content-secondary">
+            Create your first record to start tracking expenses
+          </p>
+          <button
+            onClick={() => setShowForm(true)}
+            className="mt-6 rounded-xl bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-hover"
+          >
+            Add Your First Record
+          </button>
         </div>
       ) : (
         <RecordList

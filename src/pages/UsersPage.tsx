@@ -71,95 +71,131 @@ export function UsersPage() {
     }
   }
 
+  const inputClassName =
+    'mt-1 block w-full rounded-xl border border-border-default bg-surface px-3 py-2.5 text-content shadow-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary disabled:bg-surface-tertiary disabled:text-content-secondary'
+
+  const labelClassName = 'block text-sm font-medium text-content'
+
   if (showForm) {
     return (
-      <div className="p-4">
-        <h1 className="mb-4 text-xl font-bold">{editingUser ? 'Edit User' : 'Add User'}</h1>
-        <form onSubmit={handleSubmit} className="max-w-md space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              disabled={!!editingUser}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:bg-gray-100"
-              placeholder="user@example.com"
-            />
-          </div>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-content">
+            {editingUser ? 'Edit User' : 'Add User'}
+          </h1>
+          <p className="text-sm text-content-secondary">
+            {editingUser ? 'Update user details' : 'Add a new person to track expenses'}
+          </p>
+        </div>
+        <div className="max-w-xl">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className={labelClassName}>Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                disabled={!!editingUser}
+                className={inputClassName}
+                placeholder="user@example.com"
+              />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Alias (Display Name)</label>
-            <input
-              type="text"
-              value={alias}
-              onChange={(e) => setAlias(e.target.value)}
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-              placeholder="John Doe"
-            />
-          </div>
+            <div>
+              <label className={labelClassName}>Name</label>
+              <input
+                type="text"
+                value={alias}
+                onChange={(e) => setAlias(e.target.value)}
+                className={inputClassName}
+                placeholder="John Doe"
+              />
+            </div>
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && (
+              <div className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600 dark:bg-red-500/10 dark:text-red-400">
+                {error}
+              </div>
+            )}
 
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={resetForm}
-              className="flex-1 rounded-md border border-gray-300 px-4 py-2 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="flex-1 rounded-md bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
-            >
-              {editingUser ? 'Save' : 'Add'}
-            </button>
-          </div>
-        </form>
+            <div className="flex gap-3 pt-2">
+              <button
+                type="button"
+                onClick={resetForm}
+                className="flex-1 rounded-xl border border-border-default bg-surface px-4 py-2.5 font-medium text-content transition-colors hover:bg-surface-tertiary"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="flex-1 rounded-xl bg-primary px-4 py-2.5 font-medium text-white shadow-sm transition-all hover:bg-primary-hover hover:shadow-md"
+              >
+                {editingUser ? 'Save' : 'Add User'}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="p-4">
-      <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-bold">Users</h1>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-content">Users</h1>
+          <p className="text-sm text-content-secondary">
+            {users?.length || 0} {users?.length === 1 ? 'person' : 'people'}
+          </p>
+        </div>
         <button
           onClick={() => setShowForm(true)}
-          className="rounded-full bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+          className="rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-hover hover:shadow-md"
         >
-          + Add
+          + Add User
         </button>
       </div>
 
       {!users || users.length === 0 ? (
-        <div className="py-12 text-center text-gray-500">
-          <p className="text-4xl">👤</p>
-          <p className="mt-2">No users yet</p>
-          <p className="text-sm">Add users to track who paid and who owes</p>
+        <div className="rounded-2xl border border-border-default bg-surface py-16 text-center">
+          <p className="text-5xl">👤</p>
+          <p className="mt-4 text-lg font-medium text-content">No users yet</p>
+          <p className="mt-1 text-sm text-content-secondary">
+            Add users to track who paid and who owes
+          </p>
+          <button
+            onClick={() => setShowForm(true)}
+            className="mt-6 rounded-xl bg-primary px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-hover"
+          >
+            Add Your First User
+          </button>
         </div>
       ) : (
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {users.map((user) => (
             <div
               key={user.email}
-              className="flex items-center justify-between rounded-lg bg-white p-4 shadow transition-shadow hover:shadow-md"
+              className="flex items-center justify-between rounded-2xl border border-border-default bg-surface p-4 transition-all hover:border-content-tertiary"
             >
-              <div>
-                <p className="font-medium">{user.alias}</p>
-                <p className="text-sm text-gray-500">{user.email}</p>
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary-light text-lg font-semibold text-primary">
+                  {user.alias.charAt(0).toUpperCase()}
+                </span>
+                <div className="min-w-0">
+                  <p className="truncate font-medium text-content">{user.alias}</p>
+                  <p className="truncate text-sm text-content-secondary">{user.email}</p>
+                </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-shrink-0 gap-1">
                 <button
                   onClick={() => handleEdit(user)}
-                  className="rounded px-3 py-1 text-indigo-600 hover:bg-indigo-50"
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary-light"
                 >
                   Edit
                 </button>
                 <button
                   onClick={() => handleDelete(user.email)}
-                  className="rounded px-3 py-1 text-red-600 hover:bg-red-50"
+                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
                 >
                   Delete
                 </button>
