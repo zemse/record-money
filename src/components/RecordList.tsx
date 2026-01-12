@@ -82,14 +82,77 @@ export function RecordList({
               return (
                 <div
                   key={record.uuid}
-                  className={`cursor-pointer rounded-2xl border p-4 transition-all hover:shadow-sm ${
+                  className={`relative cursor-pointer rounded-2xl border p-4 transition-all hover:shadow-sm ${
                     involved
                       ? 'border-border-default bg-surface hover:border-content-tertiary'
                       : 'border-dashed border-content-tertiary/50 bg-surface-tertiary/30 hover:border-content-tertiary'
                   }`}
                   onClick={() => onEdit(record)}
                 >
-                  <div className="flex items-start justify-between gap-2">
+                  {/* Menu button - top right */}
+                  <div className="absolute right-2 top-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setOpenMenuId(openMenuId === record.uuid ? null : record.uuid)
+                      }}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-content-secondary transition-colors hover:bg-surface-tertiary"
+                    >
+                      <span className="text-lg">⋯</span>
+                    </button>
+
+                    {openMenuId === record.uuid && (
+                      <>
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setOpenMenuId(null)
+                          }}
+                        />
+                        <div className="absolute right-0 top-full z-20 mt-1 w-40 rounded-xl border border-border-default bg-surface p-2 shadow-lg">
+                          {onShare && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setOpenMenuId(null)
+                                onShare(record)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
+                            >
+                              <span>🔗</span>
+                              <span>Share</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setOpenMenuId(null)
+                              onEdit(record)
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
+                          >
+                            <span>✏️</span>
+                            <span>Edit</span>
+                          </button>
+                          <div className="my-1 border-t border-border-default" />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setOpenMenuId(null)
+                              onDelete(record.uuid)
+                            }}
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+                          >
+                            <span>🗑️</span>
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                  <div className="flex items-start justify-between gap-2 pr-8">
                     <div className="flex min-w-0 flex-1 gap-3">
                       <span
                         className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-xl ${
@@ -132,69 +195,6 @@ export function RecordList({
                         {formatAmount(record.amount, record.currency)}
                       </p>
                       <p className="text-xs text-content-tertiary">{record.time}</p>
-                    </div>
-                  </div>
-                  <div className="mt-3 flex justify-end border-t border-border-default pt-3">
-                    <div className="relative">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setOpenMenuId(openMenuId === record.uuid ? null : record.uuid)
-                        }}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-content-secondary transition-colors hover:bg-surface-tertiary"
-                      >
-                        <span className="text-lg">⋯</span>
-                      </button>
-
-                      {openMenuId === record.uuid && (
-                        <>
-                          <div
-                            className="fixed inset-0 z-10"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setOpenMenuId(null)
-                            }}
-                          />
-                          <div className="absolute right-0 bottom-full z-20 mb-1 w-40 rounded-xl border border-border-default bg-surface p-2 shadow-lg">
-                            {onShare && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setOpenMenuId(null)
-                                  onShare(record)
-                                }}
-                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
-                              >
-                                <span>🔗</span>
-                                <span>Share</span>
-                              </button>
-                            )}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setOpenMenuId(null)
-                                onEdit(record)
-                              }}
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
-                            >
-                              <span>✏️</span>
-                              <span>Edit</span>
-                            </button>
-                            <div className="my-1 border-t border-border-default" />
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                setOpenMenuId(null)
-                                onDelete(record.uuid)
-                              }}
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
-                            >
-                              <span>🗑️</span>
-                              <span>Delete</span>
-                            </button>
-                          </div>
-                        </>
-                      )}
                     </div>
                   </div>
                 </div>

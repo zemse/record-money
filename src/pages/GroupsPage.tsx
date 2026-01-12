@@ -298,99 +298,98 @@ export function GroupsPage() {
             return (
               <div
                 key={group.uuid}
-                className={`rounded-2xl border p-4 transition-all ${
+                className={`relative rounded-2xl border p-4 transition-all ${
                   group.isDefault
                     ? 'border-primary/30 bg-primary-light'
                     : 'border-border-default bg-surface hover:border-content-tertiary'
                 }`}
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-surface-tertiary text-xl">
-                      {group.isDefault ? '📁' : '👥'}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate font-medium text-content">{group.name}</p>
-                        {group.isDefault && (
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                            Default
-                          </span>
+                {/* Actions menu - top right */}
+                <div className="absolute right-2 top-2">
+                  <button
+                    onClick={() =>
+                      setExportingGroupId(exportingGroupId === group.uuid ? null : group.uuid)
+                    }
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-content-secondary transition-colors hover:bg-surface-tertiary"
+                  >
+                    <span className="text-lg">⋯</span>
+                  </button>
+
+                  {exportingGroupId === group.uuid && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-10"
+                        onClick={() => setExportingGroupId(null)}
+                      />
+                      <div className="absolute right-0 top-full z-20 mt-1 w-44 rounded-xl border border-border-default bg-surface p-2 shadow-lg">
+                        <p className="px-3 py-1 text-xs text-content-tertiary">
+                          {getGroupRecords(group.uuid).length} records
+                        </p>
+                        <button
+                          onClick={() => handleExportUrl(group)}
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
+                        >
+                          <span>🔗</span>
+                          <span>Copy Share Link</span>
+                        </button>
+                        <button
+                          onClick={() => handleExportFile(group)}
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
+                        >
+                          <span>📁</span>
+                          <span>Download File</span>
+                        </button>
+
+                        {!group.isDefault && (
+                          <>
+                            <div className="my-1 border-t border-border-default" />
+                            <button
+                              onClick={() => {
+                                setExportingGroupId(null)
+                                handleEdit(group)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
+                            >
+                              <span>✏️</span>
+                              <span>Edit Group</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setExportingGroupId(null)
+                                handleDelete(group.uuid)
+                              }}
+                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+                            >
+                              <span>🗑️</span>
+                              <span>Delete Group</span>
+                            </button>
+                          </>
                         )}
                       </div>
-                      <p className="text-sm text-content-secondary">
-                        {group.isDefault
-                          ? 'For ungrouped expenses'
-                          : group.members.length === 0
-                            ? 'No members'
-                            : `${group.members.length} ${group.members.length === 1 ? 'member' : 'members'}`}
-                      </p>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3 pr-8">
+                  <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-surface-tertiary text-xl">
+                    {group.isDefault ? '📁' : '👥'}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate font-medium text-content">{group.name}</p>
+                      {group.isDefault && (
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                          Default
+                        </span>
+                      )}
                     </div>
-                  </div>
-                  {/* Actions menu */}
-                  <div className="relative flex-shrink-0">
-                    <button
-                      onClick={() =>
-                        setExportingGroupId(exportingGroupId === group.uuid ? null : group.uuid)
-                      }
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-content-secondary transition-colors hover:bg-surface-tertiary"
-                    >
-                      <span className="text-lg">⋯</span>
-                    </button>
-
-                    {exportingGroupId === group.uuid && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-10"
-                          onClick={() => setExportingGroupId(null)}
-                        />
-                        <div className="absolute right-0 z-20 mt-1 w-44 rounded-xl border border-border-default bg-surface p-2 shadow-lg">
-                          <p className="px-3 py-1 text-xs text-content-tertiary">
-                            {getGroupRecords(group.uuid).length} records
-                          </p>
-                          <button
-                            onClick={() => handleExportUrl(group)}
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
-                          >
-                            <span>🔗</span>
-                            <span>Copy Share Link</span>
-                          </button>
-                          <button
-                            onClick={() => handleExportFile(group)}
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
-                          >
-                            <span>📁</span>
-                            <span>Download File</span>
-                          </button>
-
-                          {!group.isDefault && (
-                            <>
-                              <div className="my-1 border-t border-border-default" />
-                              <button
-                                onClick={() => {
-                                  setExportingGroupId(null)
-                                  handleEdit(group)
-                                }}
-                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
-                              >
-                                <span>✏️</span>
-                                <span>Edit Group</span>
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setExportingGroupId(null)
-                                  handleDelete(group.uuid)
-                                }}
-                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
-                              >
-                                <span>🗑️</span>
-                                <span>Delete Group</span>
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </>
-                    )}
+                    <p className="text-sm text-content-secondary">
+                      {group.isDefault
+                        ? 'For ungrouped expenses'
+                        : group.members.length === 0
+                          ? 'No members'
+                          : `${group.members.length} ${group.members.length === 1 ? 'member' : 'members'}`}
+                    </p>
                   </div>
                 </div>
 

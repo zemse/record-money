@@ -235,88 +235,83 @@ export function UsersPage() {
             return (
               <div
                 key={user.email}
-                className={`rounded-2xl border p-4 transition-all ${
+                className={`relative rounded-2xl border p-4 transition-all ${
                   isMe
                     ? 'border-primary/30 bg-primary-light'
                     : 'border-border-default bg-surface hover:border-content-tertiary'
                 }`}
               >
-                <div className="flex items-center justify-between">
-                  <div className="flex min-w-0 flex-1 items-center gap-3">
-                    <span
-                      className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-lg font-semibold ${
-                        isMe ? 'bg-primary text-white' : 'bg-primary-light text-primary'
-                      }`}
-                    >
-                      {user.alias.charAt(0).toUpperCase()}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate font-medium text-content">{user.alias}</p>
-                        {isMe && (
-                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
-                            Me
-                          </span>
-                        )}
-                      </div>
-                      <p className="truncate text-sm text-content-secondary">{user.email}</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-3 flex justify-end border-t border-border-default pt-3">
-                  <div className="relative">
-                    <button
-                      onClick={() =>
-                        setOpenMenuEmail(openMenuEmail === user.email ? null : user.email)
-                      }
-                      className="flex h-8 w-8 items-center justify-center rounded-lg text-content-secondary transition-colors hover:bg-surface-tertiary"
-                    >
-                      <span className="text-lg">⋯</span>
-                    </button>
+                {/* Menu button - top right */}
+                <div className="absolute right-2 top-2">
+                  <button
+                    onClick={() =>
+                      setOpenMenuEmail(openMenuEmail === user.email ? null : user.email)
+                    }
+                    className="flex h-8 w-8 items-center justify-center rounded-lg text-content-secondary transition-colors hover:bg-surface-tertiary"
+                  >
+                    <span className="text-lg">⋯</span>
+                  </button>
 
-                    {openMenuEmail === user.email && (
-                      <>
-                        <div
-                          className="fixed inset-0 z-10"
-                          onClick={() => setOpenMenuEmail(null)}
-                        />
-                        <div className="absolute right-0 bottom-full z-20 mb-1 w-40 rounded-xl border border-border-default bg-surface p-2 shadow-lg">
-                          {!isMe && (
-                            <button
-                              onClick={() => {
-                                setOpenMenuEmail(null)
-                                handleSetAsMe(user.email)
-                              }}
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-500/10"
-                            >
-                              <span>👤</span>
-                              <span>Set as Me</span>
-                            </button>
-                          )}
+                  {openMenuEmail === user.email && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setOpenMenuEmail(null)} />
+                      <div className="absolute right-0 top-full z-20 mt-1 w-40 rounded-xl border border-border-default bg-surface p-2 shadow-lg">
+                        {!isMe && (
                           <button
                             onClick={() => {
                               setOpenMenuEmail(null)
-                              handleEdit(user)
+                              handleSetAsMe(user.email)
                             }}
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-green-600 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-500/10"
                           >
-                            <span>✏️</span>
-                            <span>Edit</span>
+                            <span>👤</span>
+                            <span>Set as Me</span>
                           </button>
-                          <div className="my-1 border-t border-border-default" />
-                          <button
-                            onClick={() => {
-                              setOpenMenuEmail(null)
-                              handleDelete(user.email)
-                            }}
-                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
-                          >
-                            <span>🗑️</span>
-                            <span>Delete</span>
-                          </button>
-                        </div>
-                      </>
-                    )}
+                        )}
+                        <button
+                          onClick={() => {
+                            setOpenMenuEmail(null)
+                            handleEdit(user)
+                          }}
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
+                        >
+                          <span>✏️</span>
+                          <span>Edit</span>
+                        </button>
+                        <div className="my-1 border-t border-border-default" />
+                        <button
+                          onClick={() => {
+                            setOpenMenuEmail(null)
+                            handleDelete(user.email)
+                          }}
+                          className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+                        >
+                          <span>🗑️</span>
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-3 pr-8">
+                  <span
+                    className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-lg font-semibold ${
+                      isMe ? 'bg-primary text-white' : 'bg-primary-light text-primary'
+                    }`}
+                  >
+                    {user.alias.charAt(0).toUpperCase()}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="truncate font-medium text-content">{user.alias}</p>
+                      {isMe && (
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                          Me
+                        </span>
+                      )}
+                    </div>
+                    <p className="truncate text-sm text-content-secondary">{user.email}</p>
                   </div>
                 </div>
               </div>
