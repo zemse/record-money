@@ -1,4 +1,5 @@
 import { Outlet, NavLink } from 'react-router-dom'
+import { OfflineBanner } from './OfflineBanner'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: '📊', end: true },
@@ -11,6 +12,8 @@ const navItems = [
 export function Layout() {
   return (
     <div className="flex min-h-screen bg-surface-secondary">
+      <OfflineBanner />
+
       {/* Desktop Sidebar */}
       <nav className="fixed top-0 left-0 hidden h-full w-60 flex-col border-r border-border-default bg-surface md:flex">
         <div className="p-5">

@@ -143,7 +143,7 @@ Users can share expenses via links (small) or files (large).
 
 - [x] Test import/export round-trip
 - [x] Test dedup scenarios
-- [ ] Approval to proceed
+- [x] Approval to proceed
 
 ---
 
@@ -153,22 +153,22 @@ Users can share expenses via links (small) or files (large).
 
 ### Tasks
 
-- [ ] PWA setup
-  - [ ] vite-plugin-pwa integration
-  - [ ] Manifest file
-  - [ ] App icons (192, 512, maskable)
-- [ ] Service worker
-  - [ ] Cache static assets
-  - [ ] Cache-first strategy
-  - [ ] Network-only for API calls
-- [ ] Offline indicator
-  - [ ] useOnlineStatus hook
-  - [ ] Offline banner component
+- [x] PWA setup
+  - [x] vite-plugin-pwa integration
+  - [x] Manifest file
+  - [x] App icons (192, 512, maskable)
+- [x] Service worker
+  - [x] Cache static assets
+  - [x] Cache-first strategy
+  - [x] Network-only for API calls
+- [x] Offline indicator
+  - [x] useOnlineStatus hook
+  - [x] Offline banner component
 - [ ] Add to Home Screen
   - [ ] Test on iOS Safari
   - [ ] Test on Android Chrome
-- [ ] Netlify deployment
-  - [ ] Build configuration
+- [x] Netlify deployment
+  - [x] Build configuration
   - [ ] Deploy preview
   - [ ] Production deploy
 - [ ] Lighthouse audit
