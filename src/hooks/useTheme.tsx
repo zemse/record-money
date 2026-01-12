@@ -49,6 +49,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
         key: 'main',
         autoApplyAiChanges: false,
         lastUsedCurrency: 'INR',
+        defaultDisplayCurrency: 'INR',
         theme: newTheme,
       })
     }

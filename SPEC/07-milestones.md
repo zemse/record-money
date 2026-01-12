@@ -45,9 +45,9 @@ Working app where user can add expenses with splits, manage users and groups.
 
 ### Review Gate
 
-- [ ] Code review
-- [ ] Manual testing of all CRUD
-- [ ] Approval to proceed
+- [x] Code review
+- [x] Manual testing of all CRUD
+- [x] Approval to proceed
 
 ---
 
@@ -57,36 +57,36 @@ Working app where user can add expenses with splits, manage users and groups.
 
 ### Tasks
 
-- [ ] Current user ("Me") support
-  - [ ] Add `currentUserEmail` to Settings type
-  - [ ] "Set as Me" button on user cards in Users page
-  - [ ] Display current user in Settings page
-- [ ] Default display currency
-  - [ ] Add `defaultDisplayCurrency` to Settings type
-  - [ ] Currency selector in Settings page
-  - [ ] Convert balances to display currency on Dashboard
-- [ ] Balance calculation logic
-  - [ ] Per-group balances
-  - [ ] Net simplification (A owes B ₹100, B owes A ₹30 → A owes B ₹70)
-  - [ ] Handle all share types (equal, percentage, exact, shares)
-- [ ] Dashboard page (new home page at `/`)
-  - [ ] Overall summary card (net balance, you owe vs owed to you)
-  - [ ] Per-group balance cards
-  - [ ] Non-group expenses summary
-  - [ ] Detailed balance list (expandable)
-  - [ ] Prompt to set "me" if not configured
-  - [ ] Color coding (green = owed, red = owe)
-- [ ] Navigation update
-  - [ ] Dashboard at `/` (new home)
-  - [ ] Records moves to `/records`
-  - [ ] Add Dashboard icon to nav
-- [ ] Records list improvements
-  - [ ] Filter by group
-  - [ ] Filter by date range
-  - [ ] Filter by category
-  - [ ] Search by title
-- [ ] Settle up (phase 2)
-  - [ ] Settle up button creates settlement record
+- [x] Current user ("Me") support
+  - [x] Add `currentUserEmail` to Settings type
+  - [x] "Set as Me" button on user cards in Users page
+  - [x] Display current user in Settings page
+- [x] Default display currency
+  - [x] Add `defaultDisplayCurrency` to Settings type
+  - [x] Currency selector in Settings page
+  - [x] Convert balances to display currency on Dashboard
+- [x] Balance calculation logic
+  - [x] Per-group balances
+  - [x] Net simplification (A owes B ₹100, B owes A ₹30 → A owes B ₹70)
+  - [x] Handle all share types (equal, percentage, exact, shares)
+- [x] Dashboard page (new home page at `/`)
+  - [x] Overall summary card (net balance, you owe vs owed to you)
+  - [x] Per-group balance cards
+  - [x] Non-group expenses summary
+  - [x] Detailed balance list (expandable)
+  - [x] Prompt to set "me" if not configured
+  - [x] Color coding (green = owed, red = owe)
+- [x] Navigation update
+  - [x] Dashboard at `/` (new home)
+  - [x] Records moves to `/records`
+  - [x] Add Dashboard icon to nav
+- [x] Records list improvements
+  - [x] Filter by group
+  - [x] Filter by date range
+  - [x] Filter by category
+  - [x] Search by title
+- [x] Settle up (phase 2)
+  - [x] Settle up button creates settlement record
 - [ ] Category management (if time permits)
   - [ ] Predefined categories
   - [ ] Custom categories

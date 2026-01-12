@@ -1,5 +1,5 @@
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db } from '../db'
+import { db, updateSettings } from '../db'
 import { useTheme } from '../hooks/useTheme'
 import type { Theme } from '../types'
 
@@ -9,9 +9,22 @@ const themeOptions: { value: Theme; label: string; icon: string }[] = [
   { value: 'system', label: 'System', icon: '💻' },
 ]
 
+const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'SGD', 'AED', 'THB']
+
 export function SettingsPage() {
   const settings = useLiveQuery(() => db.settings.get('main'))
+  const users = useLiveQuery(() => db.users.toArray())
   const { theme, setTheme } = useTheme()
+
+  const currentUser = users?.find((u) => u.email === settings?.currentUserEmail)
+
+  const handleCurrencyChange = async (currency: string) => {
+    await updateSettings({ defaultDisplayCurrency: currency })
+  }
+
+  const handleClearCurrentUser = async () => {
+    await updateSettings({ currentUserEmail: undefined })
+  }
 
   return (
     <div className="space-y-6">
@@ -21,6 +34,39 @@ export function SettingsPage() {
       </div>
 
       <div className="space-y-4">
+        {/* Current User ("Me") */}
+        <div className="rounded-2xl border border-border-default bg-surface p-5">
+          <h2 className="font-medium text-content">Current User</h2>
+          <p className="mt-1 text-sm text-content-secondary">
+            Set yourself to calculate balances from your perspective
+          </p>
+          {currentUser ? (
+            <div className="mt-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-lg font-semibold text-white">
+                  {currentUser.alias.charAt(0).toUpperCase()}
+                </span>
+                <div>
+                  <p className="font-medium text-content">{currentUser.alias}</p>
+                  <p className="text-sm text-content-secondary">{currentUser.email}</p>
+                </div>
+              </div>
+              <button
+                onClick={handleClearCurrentUser}
+                className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
+              >
+                Clear
+              </button>
+            </div>
+          ) : (
+            <div className="mt-3 rounded-xl bg-amber-50 px-4 py-3 dark:bg-amber-500/10">
+              <p className="text-sm text-amber-700 dark:text-amber-400">
+                No user set as "Me". Go to Users page and click "Set as Me" on your profile.
+              </p>
+            </div>
+          )}
+        </div>
+
         {/* Theme Selection */}
         <div className="rounded-2xl border border-border-default bg-surface p-5">
           <div className="mb-4">
@@ -51,13 +97,26 @@ export function SettingsPage() {
           </div>
         </div>
 
-        {/* Currency */}
+        {/* Display Currency */}
         <div className="rounded-2xl border border-border-default bg-surface p-5">
-          <h2 className="font-medium text-content">Currency</h2>
-          <p className="mt-1 text-sm text-content-secondary">Default currency for new records</p>
-          <div className="mt-3 inline-flex items-center gap-2 rounded-lg bg-surface-tertiary px-3 py-2">
-            <span className="text-lg">💱</span>
-            <span className="font-medium text-content">{settings?.lastUsedCurrency || 'INR'}</span>
+          <h2 className="font-medium text-content">Display Currency</h2>
+          <p className="mt-1 text-sm text-content-secondary">
+            Currency used to display balances on the Dashboard
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {CURRENCIES.map((currency) => (
+              <button
+                key={currency}
+                onClick={() => handleCurrencyChange(currency)}
+                className={`rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                  (settings?.defaultDisplayCurrency || 'INR') === currency
+                    ? 'bg-primary text-white shadow-sm'
+                    : 'bg-surface-tertiary text-content-secondary hover:bg-surface-hover'
+                }`}
+              >
+                {currency}
+              </button>
+            ))}
           </div>
         </div>
 

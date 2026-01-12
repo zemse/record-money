@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, normalizeEmail } from '../db'
+import { db, normalizeEmail, updateSettings } from '../db'
 import type { User } from '../types'
 
 export function UsersPage() {
@@ -11,6 +11,11 @@ export function UsersPage() {
   const [error, setError] = useState('')
 
   const users = useLiveQuery(() => db.users.toArray())
+  const settings = useLiveQuery(() => db.settings.get('main'))
+
+  const handleSetAsMe = async (userEmail: string) => {
+    await updateSettings({ currentUserEmail: userEmail })
+  }
 
   const resetForm = () => {
     setEmail('')
@@ -172,36 +177,64 @@ export function UsersPage() {
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {users.map((user) => (
-            <div
-              key={user.email}
-              className="flex items-center justify-between rounded-2xl border border-border-default bg-surface p-4 transition-all hover:border-content-tertiary"
-            >
-              <div className="flex min-w-0 flex-1 items-center gap-3">
-                <span className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary-light text-lg font-semibold text-primary">
-                  {user.alias.charAt(0).toUpperCase()}
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-content">{user.alias}</p>
-                  <p className="truncate text-sm text-content-secondary">{user.email}</p>
+          {users.map((user) => {
+            const isMe = settings?.currentUserEmail === user.email
+            return (
+              <div
+                key={user.email}
+                className={`rounded-2xl border p-4 transition-all ${
+                  isMe
+                    ? 'border-primary/30 bg-primary-light'
+                    : 'border-border-default bg-surface hover:border-content-tertiary'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
+                    <span
+                      className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl text-lg font-semibold ${
+                        isMe ? 'bg-primary text-white' : 'bg-primary-light text-primary'
+                      }`}
+                    >
+                      {user.alias.charAt(0).toUpperCase()}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate font-medium text-content">{user.alias}</p>
+                        {isMe && (
+                          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                            Me
+                          </span>
+                        )}
+                      </div>
+                      <p className="truncate text-sm text-content-secondary">{user.email}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-3 flex justify-end gap-1 border-t border-border-default pt-3">
+                  {!isMe && (
+                    <button
+                      onClick={() => handleSetAsMe(user.email)}
+                      className="rounded-lg px-3 py-1.5 text-sm font-medium text-green-600 transition-colors hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-500/10"
+                    >
+                      Set as Me
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleEdit(user)}
+                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary-light"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={() => handleDelete(user.email)}
+                    className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
-              <div className="flex flex-shrink-0 gap-1">
-                <button
-                  onClick={() => handleEdit(user)}
-                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary-light"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDelete(user.email)}
-                  className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

@@ -49,5 +49,7 @@ export interface Settings {
   claudeApiKey?: string // stored locally
   autoApplyAiChanges: boolean // default: false
   lastUsedCurrency: string // ISO 4217
+  defaultDisplayCurrency: string // ISO 4217 - for dashboard balance display
+  currentUserEmail?: string // email of the current user ("me")
   theme: Theme // default: 'system'
 }

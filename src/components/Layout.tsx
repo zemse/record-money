@@ -1,10 +1,11 @@
 import { Outlet, NavLink } from 'react-router-dom'
 
 const navItems = [
-  { to: '/', label: 'Records', icon: '📝' },
-  { to: '/groups', label: 'Groups', icon: '👥' },
-  { to: '/users', label: 'Users', icon: '👤' },
-  { to: '/settings', label: 'Settings', icon: '⚙️' },
+  { to: '/', label: 'Dashboard', icon: '📊', end: true },
+  { to: '/records', label: 'Records', icon: '📝', end: false },
+  { to: '/groups', label: 'Groups', icon: '👥', end: false },
+  { to: '/users', label: 'Users', icon: '👤', end: false },
+  { to: '/settings', label: 'Settings', icon: '⚙️', end: false },
 ]
 
 export function Layout() {
@@ -20,10 +21,11 @@ export function Layout() {
         </div>
 
         <div className="flex flex-1 flex-col gap-1 px-3">
-          {navItems.map(({ to, label, icon }) => (
+          {navItems.map(({ to, label, icon, end }) => (
             <NavLink
               key={to}
               to={to}
+              end={end}
               className={({ isActive }) =>
                 `flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-all ${
                   isActive
@@ -53,10 +55,11 @@ export function Layout() {
       {/* Mobile Bottom Navigation */}
       <nav className="fixed right-0 bottom-0 left-0 border-t border-border-default bg-surface/95 backdrop-blur-sm md:hidden">
         <div className="mx-auto flex max-w-md">
-          {navItems.map(({ to, label, icon }) => (
+          {navItems.map(({ to, label, icon, end }) => (
             <NavLink
               key={to}
               to={to}
+              end={end}
               className={({ isActive }) =>
                 `flex flex-1 flex-col items-center gap-1 py-3 text-xs font-medium transition-colors ${
                   isActive ? 'text-primary' : 'text-content-tertiary'

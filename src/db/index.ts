@@ -57,6 +57,7 @@ export async function updateSettings(updates: Partial<Omit<Settings, 'key'>>): P
       key: 'main',
       autoApplyAiChanges: false,
       lastUsedCurrency: 'INR',
+      defaultDisplayCurrency: 'INR',
       theme: 'system',
       ...updates,
     })
@@ -71,8 +72,12 @@ export async function initializeSettings(): Promise<void> {
       key: 'main',
       autoApplyAiChanges: false,
       lastUsedCurrency: 'INR',
+      defaultDisplayCurrency: 'INR',
       theme: 'system',
     })
+  } else if (!settings.defaultDisplayCurrency) {
+    // Migration: add defaultDisplayCurrency if missing
+    await db.settings.update('main', { defaultDisplayCurrency: 'INR' })
   }
 }
 
