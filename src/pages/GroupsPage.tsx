@@ -77,7 +77,7 @@ export function GroupsPage() {
     return (
       <div className="p-4">
         <h1 className="mb-4 text-xl font-bold">{editingGroup ? 'Edit Group' : 'Add Group'}</h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="max-w-md space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Group Name</label>
             <input
@@ -135,9 +135,12 @@ export function GroupsPage() {
           <p className="text-sm">Create groups to organize shared expenses</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {groups.map((group) => (
-            <div key={group.uuid} className="rounded-lg bg-white p-4 shadow">
+            <div
+              key={group.uuid}
+              className="rounded-lg bg-white p-4 shadow transition-shadow hover:shadow-md"
+            >
               <div className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">{group.name}</p>

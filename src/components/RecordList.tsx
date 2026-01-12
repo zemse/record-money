@@ -58,11 +58,11 @@ export function RecordList({ records, users, onEdit, onDelete }: RecordListProps
       {sortedDates.map((date) => (
         <div key={date}>
           <h3 className="mb-2 text-sm font-medium text-gray-500">{formatDate(date)}</h3>
-          <div className="space-y-2">
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {groupedRecords[date].map((record) => (
               <div
                 key={record.uuid}
-                className="rounded-lg bg-white p-4 shadow"
+                className="cursor-pointer rounded-lg bg-white p-4 shadow transition-shadow hover:shadow-md"
                 onClick={() => onEdit(record)}
               >
                 <div className="flex items-start justify-between">

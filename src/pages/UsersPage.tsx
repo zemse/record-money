@@ -75,7 +75,7 @@ export function UsersPage() {
     return (
       <div className="p-4">
         <h1 className="mb-4 text-xl font-bold">{editingUser ? 'Edit User' : 'Add User'}</h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="max-w-md space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Email</label>
             <input
@@ -140,11 +140,11 @@ export function UsersPage() {
           <p className="text-sm">Add users to track who paid and who owes</p>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {users.map((user) => (
             <div
               key={user.email}
-              className="flex items-center justify-between rounded-lg bg-white p-4 shadow"
+              className="flex items-center justify-between rounded-lg bg-white p-4 shadow transition-shadow hover:shadow-md"
             >
               <div>
                 <p className="font-medium">{user.alias}</p>

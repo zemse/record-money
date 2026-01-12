@@ -84,19 +84,21 @@ export function RecordsPage() {
     return (
       <div className="p-4">
         <h1 className="mb-4 text-xl font-bold">{editingRecord ? 'Edit Record' : 'Add Record'}</h1>
-        <RecordForm
-          initialData={editingRecord || defaultValues}
-          users={users || []}
-          groups={groups || []}
-          onSubmit={(data) => {
-            if (editingRecord) {
-              handleUpdate(editingRecord.uuid, data)
-            } else {
-              handleAdd(data)
-            }
-          }}
-          onCancel={handleCancel}
-        />
+        <div className="max-w-lg">
+          <RecordForm
+            initialData={editingRecord || defaultValues}
+            users={users || []}
+            groups={groups || []}
+            onSubmit={(data) => {
+              if (editingRecord) {
+                handleUpdate(editingRecord.uuid, data)
+              } else {
+                handleAdd(data)
+              }
+            }}
+            onCancel={handleCancel}
+          />
+        </div>
       </div>
     )
   }
