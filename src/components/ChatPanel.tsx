@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, generateUUID, now } from '../db'
+import { db, generateUUID, now, updateSettings } from '../db'
 import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import {
   sendMessage,
@@ -30,6 +30,7 @@ export function ChatPanel() {
 
   const hasApiKey = !!settings?.claudeApiKey
   const currentUserEmail = settings?.currentUserEmail
+  const autoApply = settings?.autoApplyAiChanges ?? false
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -68,17 +69,23 @@ export function ChatPanel() {
 
     if (response.success) {
       const action = parseExpenseAction(response.content)
+      const messageId = generateUUID()
 
       const assistantMessage: ChatMessage = {
-        id: generateUUID(),
+        id: messageId,
         role: 'assistant',
         content: response.content,
         timestamp: Date.now(),
         action: action || undefined,
-        actionStatus: action ? 'pending' : undefined,
+        actionStatus: action ? (autoApply ? 'confirmed' : 'pending') : undefined,
       }
 
       setMessages((prev) => [...prev, assistantMessage])
+
+      // Auto-apply if enabled
+      if (action && autoApply) {
+        await applyExpenseAction(action, messageId)
+      }
     } else {
       const errorMessage: ChatMessage = {
         id: generateUUID(),
@@ -92,11 +99,11 @@ export function ChatPanel() {
     setIsLoading(false)
   }
 
-  const handleConfirmAction = async (messageId: string) => {
-    const message = messages.find((m) => m.id === messageId)
-    if (!message?.action || message.action.action !== 'create_expense') return
+  // Apply expense action (used by both manual confirm and auto-apply)
+  const applyExpenseAction = async (action: ExpenseAction, _messageId?: string) => {
+    if (action.action !== 'create_expense') return
 
-    const { data } = message.action
+    const { data } = action
 
     // Resolve "me" to current user email
     const resolvePaidBy = data.paidBy.map((p) =>
@@ -131,11 +138,6 @@ export function ChatPanel() {
 
     await db.records.add(record)
 
-    // Update message status
-    setMessages((prev) =>
-      prev.map((m) => (m.id === messageId ? { ...m, actionStatus: 'confirmed' as const } : m))
-    )
-
     // Add confirmation message
     const confirmMessage: ChatMessage = {
       id: generateUUID(),
@@ -144,6 +146,18 @@ export function ChatPanel() {
       timestamp: Date.now(),
     }
     setMessages((prev) => [...prev, confirmMessage])
+  }
+
+  const handleConfirmAction = async (messageId: string) => {
+    const message = messages.find((m) => m.id === messageId)
+    if (!message?.action) return
+
+    await applyExpenseAction(message.action, messageId)
+
+    // Update message status
+    setMessages((prev) =>
+      prev.map((m) => (m.id === messageId ? { ...m, actionStatus: 'confirmed' as const } : m))
+    )
   }
 
   const handleCancelAction = (messageId: string) => {
@@ -330,6 +344,15 @@ export function ChatPanel() {
               ➤
             </button>
           </div>
+          <label className="mt-2 flex cursor-pointer items-center gap-2">
+            <input
+              type="checkbox"
+              checked={autoApply}
+              onChange={(e) => updateSettings({ autoApplyAiChanges: e.target.checked })}
+              className="h-4 w-4 rounded border-border-default text-primary focus:ring-primary"
+            />
+            <span className="text-xs text-content-secondary">Auto-apply changes</span>
+          </label>
         </div>
       )}
     </div>

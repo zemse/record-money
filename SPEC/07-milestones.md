@@ -217,9 +217,9 @@ Deployed PWA that works offline and is installable.
   - [x] Summary card
   - [x] Expandable details
   - [x] Confirm/Edit/Cancel buttons
-- [ ] Auto-apply toggle
-  - [ ] Checkbox in chat UI
-  - [ ] Persist preference
+- [x] Auto-apply toggle
+  - [x] Checkbox in chat UI
+  - [x] Persist preference
 - [x] Iterative correction
   - [x] Multi-turn conversation
   - [x] Edit based on user feedback
