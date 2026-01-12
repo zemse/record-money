@@ -98,9 +98,9 @@ User can see Dashboard with balance summaries, filter records, and track who owe
 
 ### Review Gate
 
-- [ ] Balance calculation verified with test cases
-- [ ] Dashboard UI review
-- [ ] Approval to proceed
+- [x] Balance calculation verified with test cases
+- [x] Dashboard UI review
+- [x] Approval to proceed
 
 ---
 
