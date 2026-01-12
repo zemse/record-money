@@ -61,3 +61,11 @@ export interface ExchangeRates {
   rates: Record<string, number> // currency code -> rate relative to base
   fetchedAt: number // timestamp ms when rates were fetched
 }
+
+// Category for expense classification
+export interface Category {
+  id: string // unique identifier
+  name: string // display name
+  icon: string // emoji icon
+  isSystem: boolean // true for predefined categories, false for custom
+}

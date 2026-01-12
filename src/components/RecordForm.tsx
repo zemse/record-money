@@ -1,23 +1,12 @@
 import { useState } from 'react'
-import type { ExpenseRecord, User, Group, ShareType, Participant } from '../types'
+import { useLiveQuery } from 'dexie-react-hooks'
+import type { ExpenseRecord, User, Group, ShareType, Participant, Category } from '../types'
 import { DEFAULT_GROUP_UUID } from '../types'
 import { UserPicker } from './UserPicker'
-import { addUser } from '../db'
+import { addUser, db } from '../db'
 
 // Common currencies
 const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'SGD', 'AED', 'THB']
-
-// Common categories with emojis
-const CATEGORIES = [
-  { name: 'Food', icon: '🍽️' },
-  { name: 'Transport', icon: '🚗' },
-  { name: 'Shopping', icon: '🛍️' },
-  { name: 'Entertainment', icon: '🎬' },
-  { name: 'Bills', icon: '📄' },
-  { name: 'Health', icon: '💊' },
-  { name: 'Travel', icon: '✈️' },
-  { name: 'Other', icon: '💰' },
-]
 
 interface RecordFormProps {
   initialData: Omit<ExpenseRecord, 'uuid' | 'createdAt' | 'updatedAt'>
@@ -45,7 +34,13 @@ export function RecordForm({ initialData, users, groups, onSubmit, onCancel }: R
   const [comments, setComments] = useState(initialData.comments)
   const [error, setError] = useState('')
 
-  const handleCategorySelect = (cat: { name: string; icon: string }) => {
+  // Fetch categories from database
+  const categories = useLiveQuery(() => db.categories.toArray())
+
+  // Filter out Settlement category from the picker (it's system-only for settle up)
+  const selectableCategories = categories?.filter((c) => c.name !== 'Settlement') || []
+
+  const handleCategorySelect = (cat: Category) => {
     setCategory(cat.name)
     setIcon(cat.icon)
   }
@@ -179,9 +174,9 @@ export function RecordForm({ initialData, users, groups, onSubmit, onCancel }: R
       <div>
         <label className={labelClassName}>Category</label>
         <div className="mt-2 flex flex-wrap gap-2">
-          {CATEGORIES.map((cat) => (
+          {selectableCategories.map((cat) => (
             <button
-              key={cat.name}
+              key={cat.id}
               type="button"
               onClick={() => handleCategorySelect(cat)}
               className={`rounded-xl px-3 py-2 text-sm font-medium transition-all ${

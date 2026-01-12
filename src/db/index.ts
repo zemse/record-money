@@ -1,6 +1,7 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { ExpenseRecord, User, Group, Settings, ExchangeRates } from '../types'
+import type { ExpenseRecord, User, Group, Settings, ExchangeRates, Category } from '../types'
 import { DEFAULT_GROUP_UUID } from '../types'
+import { DEFAULT_CATEGORIES } from '../constants/categories'
 
 const db = new Dexie('RecordMoney') as Dexie & {
   records: EntityTable<ExpenseRecord, 'uuid'>
@@ -8,6 +9,7 @@ const db = new Dexie('RecordMoney') as Dexie & {
   groups: EntityTable<Group, 'uuid'>
   settings: EntityTable<Settings, 'key'>
   exchangeRates: EntityTable<ExchangeRates, 'key'>
+  categories: EntityTable<Category, 'id'>
 }
 
 db.version(1).stores({
@@ -23,6 +25,15 @@ db.version(2).stores({
   groups: 'uuid',
   settings: 'key',
   exchangeRates: 'key',
+})
+
+db.version(3).stores({
+  records: 'uuid, groupId, date, category, sourceHash',
+  users: 'email',
+  groups: 'uuid',
+  settings: 'key',
+  exchangeRates: 'key',
+  categories: 'id, name, isSystem',
 })
 
 export { db }
@@ -103,6 +114,14 @@ export async function initializeDefaultGroup(): Promise<void> {
       createdAt: timestamp,
       updatedAt: timestamp,
     })
+  }
+}
+
+// Initialize default categories if not exists
+export async function initializeDefaultCategories(): Promise<void> {
+  const existingCategories = await db.categories.count()
+  if (existingCategories === 0) {
+    await db.categories.bulkAdd(DEFAULT_CATEGORIES)
   }
 }
 

@@ -6,7 +6,12 @@ import { RecordsPage } from './pages/RecordsPage'
 import { UsersPage } from './pages/UsersPage'
 import { GroupsPage } from './pages/GroupsPage'
 import { SettingsPage } from './pages/SettingsPage'
-import { initializeSettings, initializeDefaultGroup, migrateUngroupedRecords } from './db'
+import {
+  initializeSettings,
+  initializeDefaultGroup,
+  migrateUngroupedRecords,
+  initializeDefaultCategories,
+} from './db'
 import { ThemeProvider } from './hooks/useTheme'
 
 function App() {
@@ -14,6 +19,7 @@ function App() {
     const init = async () => {
       await initializeSettings()
       await initializeDefaultGroup()
+      await initializeDefaultCategories()
       await migrateUngroupedRecords()
     }
     init()

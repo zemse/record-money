@@ -1,7 +1,10 @@
+import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, updateSettings } from '../db'
 import { useTheme } from '../hooks/useTheme'
-import type { Theme } from '../types'
+import type { Theme, Category } from '../types'
+import { EmojiPicker } from '../components/EmojiPicker'
+import { generateCategoryId } from '../constants/categories'
 
 const themeOptions: { value: Theme; label: string; icon: string }[] = [
   { value: 'light', label: 'Light', icon: '☀️' },
@@ -14,7 +17,16 @@ const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'SGD', 'AED
 export function SettingsPage() {
   const settings = useLiveQuery(() => db.settings.get('main'))
   const users = useLiveQuery(() => db.users.toArray())
+  const categories = useLiveQuery(() => db.categories.toArray())
   const { theme, setTheme } = useTheme()
+
+  // Category management state
+  const [showCategoryForm, setShowCategoryForm] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+  const [newCategoryIcon, setNewCategoryIcon] = useState('💰')
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
+  const [categoryError, setCategoryError] = useState('')
 
   const currentUser = users?.find((u) => u.email === settings?.currentUserEmail)
 
@@ -24,6 +36,89 @@ export function SettingsPage() {
 
   const handleClearCurrentUser = async () => {
     await updateSettings({ currentUserEmail: undefined })
+  }
+
+  const handleAddCategory = async () => {
+    setCategoryError('')
+    if (!newCategoryName.trim()) {
+      setCategoryError('Category name is required')
+      return
+    }
+
+    // Check for duplicate name
+    const existing = categories?.find(
+      (c) => c.name.toLowerCase() === newCategoryName.trim().toLowerCase()
+    )
+    if (existing) {
+      setCategoryError('A category with this name already exists')
+      return
+    }
+
+    const newCategory: Category = {
+      id: generateCategoryId(newCategoryName),
+      name: newCategoryName.trim(),
+      icon: newCategoryIcon,
+      isSystem: false,
+    }
+
+    await db.categories.add(newCategory)
+    setNewCategoryName('')
+    setNewCategoryIcon('💰')
+    setShowCategoryForm(false)
+  }
+
+  const handleUpdateCategory = async () => {
+    if (!editingCategory) return
+    setCategoryError('')
+
+    if (!newCategoryName.trim()) {
+      setCategoryError('Category name is required')
+      return
+    }
+
+    // Check for duplicate name (excluding current)
+    const existing = categories?.find(
+      (c) =>
+        c.id !== editingCategory.id &&
+        c.name.toLowerCase() === newCategoryName.trim().toLowerCase()
+    )
+    if (existing) {
+      setCategoryError('A category with this name already exists')
+      return
+    }
+
+    await db.categories.update(editingCategory.id, {
+      name: newCategoryName.trim(),
+      icon: newCategoryIcon,
+    })
+
+    setEditingCategory(null)
+    setNewCategoryName('')
+    setNewCategoryIcon('💰')
+    setShowCategoryForm(false)
+  }
+
+  const handleDeleteCategory = async (category: Category) => {
+    if (category.isSystem) return
+    if (window.confirm(`Delete category "${category.name}"?`)) {
+      await db.categories.delete(category.id)
+    }
+  }
+
+  const startEditCategory = (category: Category) => {
+    setEditingCategory(category)
+    setNewCategoryName(category.name)
+    setNewCategoryIcon(category.icon)
+    setShowCategoryForm(true)
+    setCategoryError('')
+  }
+
+  const cancelCategoryForm = () => {
+    setShowCategoryForm(false)
+    setEditingCategory(null)
+    setNewCategoryName('')
+    setNewCategoryIcon('💰')
+    setCategoryError('')
   }
 
   return (
@@ -116,6 +211,119 @@ export function SettingsPage() {
               >
                 {currency}
               </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Categories */}
+        <div className="rounded-2xl border border-border-default bg-surface p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-medium text-content">Categories</h2>
+              <p className="mt-1 text-sm text-content-secondary">
+                Manage expense categories
+              </p>
+            </div>
+            {!showCategoryForm && (
+              <button
+                onClick={() => setShowCategoryForm(true)}
+                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+              >
+                + Add
+              </button>
+            )}
+          </div>
+
+          {/* Add/Edit Category Form */}
+          {showCategoryForm && (
+            <div className="mt-4 rounded-xl border border-border-default bg-surface-tertiary p-4">
+              <h3 className="mb-3 text-sm font-medium text-content">
+                {editingCategory ? 'Edit Category' : 'New Category'}
+              </h3>
+              <div className="flex gap-3">
+                {/* Icon picker button */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                    className="flex h-10 w-10 items-center justify-center rounded-lg border border-border-default bg-surface text-xl transition-colors hover:bg-surface-hover"
+                  >
+                    {newCategoryIcon}
+                  </button>
+                  {showEmojiPicker && (
+                    <div className="absolute left-0 top-12 z-10">
+                      <EmojiPicker
+                        onSelect={(emoji) => {
+                          setNewCategoryIcon(emoji)
+                          setShowEmojiPicker(false)
+                        }}
+                        onClose={() => setShowEmojiPicker(false)}
+                      />
+                    </div>
+                  )}
+                </div>
+                {/* Name input */}
+                <input
+                  type="text"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  placeholder="Category name"
+                  className="flex-1 rounded-lg border border-border-default bg-surface px-3 py-2 text-content transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              {categoryError && (
+                <p className="mt-2 text-sm text-red-500">{categoryError}</p>
+              )}
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={cancelCategoryForm}
+                  className="rounded-lg bg-surface px-3 py-1.5 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-hover"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={editingCategory ? handleUpdateCategory : handleAddCategory}
+                  className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+                >
+                  {editingCategory ? 'Save' : 'Add'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Category List */}
+          <div className="mt-4 space-y-2">
+            {categories?.map((category) => (
+              <div
+                key={category.id}
+                className="flex items-center justify-between rounded-lg bg-surface-tertiary px-3 py-2"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{category.icon}</span>
+                  <span className="text-sm font-medium text-content">{category.name}</span>
+                  {category.isSystem && (
+                    <span className="rounded bg-content-tertiary/20 px-1.5 py-0.5 text-xs text-content-tertiary">
+                      System
+                    </span>
+                  )}
+                </div>
+                {!category.isSystem && (
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => startEditCategory(category)}
+                      className="rounded px-2 py-1 text-xs font-medium text-primary hover:bg-primary-light"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCategory(category)}
+                      className="rounded px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                )}
+              </div>
             ))}
           </div>
         </div>

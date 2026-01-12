@@ -87,10 +87,10 @@ Working app where user can add expenses with splits, manage users and groups.
   - [x] Search by title
 - [x] Settle up (phase 2)
   - [x] Settle up button creates settlement record
-- [ ] Category management (if time permits)
-  - [ ] Predefined categories
-  - [ ] Custom categories
-  - [ ] Category icons (emoji)
+- [x] Category management (if time permits)
+  - [x] Predefined categories
+  - [x] Custom categories
+  - [x] Category icons (emoji)
 
 ### Deliverable
 

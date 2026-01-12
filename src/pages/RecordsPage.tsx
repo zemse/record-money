@@ -6,18 +6,6 @@ import { DEFAULT_GROUP_UUID } from '../types'
 import { RecordForm } from '../components/RecordForm'
 import { RecordList } from '../components/RecordList'
 
-// Common categories (same as in RecordForm)
-const CATEGORIES = [
-  'Food',
-  'Transport',
-  'Shopping',
-  'Entertainment',
-  'Bills',
-  'Health',
-  'Travel',
-  'Other',
-]
-
 export function RecordsPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingRecord, setEditingRecord] = useState<ExpenseRecord | null>(null)
@@ -34,6 +22,7 @@ export function RecordsPage() {
   const users = useLiveQuery(() => db.users.toArray())
   const groups = useLiveQuery(() => db.groups.toArray())
   const settings = useLiveQuery(() => db.settings.get('main'))
+  const categories = useLiveQuery(() => db.categories.toArray())
 
   // Filter records based on current filters
   const filteredRecords = useMemo(() => {
@@ -267,9 +256,9 @@ export function RecordsPage() {
                     className={inputClassName}
                   >
                     <option value="all">All Categories</option>
-                    {CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
+                    {categories?.map((cat) => (
+                      <option key={cat.id} value={cat.name}>
+                        {cat.icon} {cat.name}
                       </option>
                     ))}
                   </select>
