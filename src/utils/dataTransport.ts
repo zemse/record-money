@@ -18,6 +18,24 @@ export interface FilePayload {
 // Max URL length for browser compatibility
 const MAX_URL_LENGTH = 2000
 
+// URL-safe base64 encoding (replaces + with -, / with _, removes padding =)
+function toUrlSafeBase64(str: string): string {
+  const base64 = btoa(unescape(encodeURIComponent(str)))
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+}
+
+// URL-safe base64 decoding
+function fromUrlSafeBase64(str: string): string {
+  // Restore standard base64 characters
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/')
+  // Add back padding if needed
+  const pad = base64.length % 4
+  if (pad) {
+    base64 += '='.repeat(4 - pad)
+  }
+  return decodeURIComponent(escape(atob(base64)))
+}
+
 // Generate export URL
 export function generateExportUrl(
   records: ExpenseRecord[],
@@ -31,7 +49,7 @@ export function generateExportUrl(
   }
 
   const json = JSON.stringify(payload)
-  const encoded = btoa(unescape(encodeURIComponent(json))) // Handle unicode
+  const encoded = toUrlSafeBase64(json)
   const url = `${baseUrl}/import?data=${encoded}`
 
   if (url.length > MAX_URL_LENGTH) {
@@ -63,7 +81,7 @@ export function parseImportUrl(
       return { success: false, error: 'No data found in URL' }
     }
 
-    const json = decodeURIComponent(escape(atob(data))) // Handle unicode
+    const json = fromUrlSafeBase64(data)
     const payload = JSON.parse(json) as UrlPayload
 
     // Validate version

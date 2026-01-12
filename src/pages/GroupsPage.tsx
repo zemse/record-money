@@ -327,61 +327,68 @@ export function GroupsPage() {
                       </p>
                     </div>
                   </div>
-                  <div className="flex flex-shrink-0 gap-1">
-                    {/* Export dropdown */}
-                    <div className="relative">
-                      <button
-                        onClick={() =>
-                          setExportingGroupId(exportingGroupId === group.uuid ? null : group.uuid)
-                        }
-                        className="rounded-lg px-3 py-1.5 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-tertiary"
-                      >
-                        Export
-                      </button>
+                  {/* Actions menu */}
+                  <div className="relative flex-shrink-0">
+                    <button
+                      onClick={() =>
+                        setExportingGroupId(exportingGroupId === group.uuid ? null : group.uuid)
+                      }
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-content-secondary transition-colors hover:bg-surface-tertiary"
+                    >
+                      <span className="text-lg">⋯</span>
+                    </button>
 
-                      {exportingGroupId === group.uuid && (
-                        <>
-                          <div
-                            className="fixed inset-0 z-10"
-                            onClick={() => setExportingGroupId(null)}
-                          />
-                          <div className="absolute right-0 z-20 mt-1 w-44 rounded-xl border border-border-default bg-surface p-2 shadow-lg">
-                            <p className="px-3 py-1 text-xs text-content-tertiary">
-                              {getGroupRecords(group.uuid).length} records
-                            </p>
-                            <button
-                              onClick={() => handleExportUrl(group)}
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
-                            >
-                              <span>🔗</span>
-                              <span>Copy Link</span>
-                            </button>
-                            <button
-                              onClick={() => handleExportFile(group)}
-                              className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
-                            >
-                              <span>📁</span>
-                              <span>Download File</span>
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {!group.isDefault && (
+                    {exportingGroupId === group.uuid && (
                       <>
-                        <button
-                          onClick={() => handleEdit(group)}
-                          className="rounded-lg px-3 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary-light"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(group.uuid)}
-                          className="rounded-lg px-3 py-1.5 text-sm font-medium text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
-                        >
-                          Delete
-                        </button>
+                        <div
+                          className="fixed inset-0 z-10"
+                          onClick={() => setExportingGroupId(null)}
+                        />
+                        <div className="absolute right-0 z-20 mt-1 w-44 rounded-xl border border-border-default bg-surface p-2 shadow-lg">
+                          <p className="px-3 py-1 text-xs text-content-tertiary">
+                            {getGroupRecords(group.uuid).length} records
+                          </p>
+                          <button
+                            onClick={() => handleExportUrl(group)}
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
+                          >
+                            <span>🔗</span>
+                            <span>Copy Share Link</span>
+                          </button>
+                          <button
+                            onClick={() => handleExportFile(group)}
+                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
+                          >
+                            <span>📁</span>
+                            <span>Download File</span>
+                          </button>
+
+                          {!group.isDefault && (
+                            <>
+                              <div className="my-1 border-t border-border-default" />
+                              <button
+                                onClick={() => {
+                                  setExportingGroupId(null)
+                                  handleEdit(group)
+                                }}
+                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
+                              >
+                                <span>✏️</span>
+                                <span>Edit Group</span>
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setExportingGroupId(null)
+                                  handleDelete(group.uuid)
+                                }}
+                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+                              >
+                                <span>🗑️</span>
+                                <span>Delete Group</span>
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </>
                     )}
                   </div>
