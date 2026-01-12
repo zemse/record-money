@@ -1,73 +1,40 @@
-# React + TypeScript + Vite
+# Record Money
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A decentralized expense tracking and splitting app. Track shared expenses, split bills, and see who owes whom - all without accounts or servers. Your data stays in your browser.
 
-Currently, two official plugins are available:
+## Why Record Money?
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **No Sign-up Required** - Start tracking immediately, no accounts needed
+- **Privacy First** - All data stored locally in your browser (IndexedDB)
+- **Works Offline** - No internet required after first load
+- **Share via Links** - Export expenses as URLs or files to share with others
 
-## React Compiler
+## Core Concepts
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### Records
+Each expense entry tracks: amount, currency, who paid, who it was for, and how to split it.
 
-## Expanding the ESLint configuration
+### Splitting Options
+- **Equal** - Split evenly among participants
+- **Percentage** - Custom percentage per person
+- **Exact** - Specific amounts per person
+- **Shares** - Ratio-based (e.g., 2:1)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### Groups
+Organize expenses by context - trips, roommates, events. Each group shows its own balance summary.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### Balances
+Automatic calculation of who owes whom, with simplification (if A owes B ₹100 and B owes A ₹30, shows A owes B ₹70).
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Development
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+See [SPEC/07-milestones.md](SPEC/07-milestones.md) for the development roadmap.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## License
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+MIT
