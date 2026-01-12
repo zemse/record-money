@@ -29,9 +29,8 @@ export function GroupsPage() {
   }, [])
 
   // Calculate balances by group for current user
-  const balancesByGroup = currentUserEmail && records
-    ? calculateBalancesByGroup(records, currentUserEmail)
-    : new Map()
+  const balancesByGroup =
+    currentUserEmail && records ? calculateBalancesByGroup(records, currentUserEmail) : new Map()
 
   // Helper to convert amount to display currency
   const convertToDisplayCurrency = useCallback(
@@ -285,7 +284,9 @@ export function GroupsPage() {
                       </div>
                     ) : balanceSummary.net > 0 ? (
                       <div className="flex items-center justify-between">
-                        <span className="text-sm text-green-700 dark:text-green-400">You get back</span>
+                        <span className="text-sm text-green-700 dark:text-green-400">
+                          You get back
+                        </span>
                         <span className="font-semibold text-green-600 dark:text-green-400">
                           {formatAmount(balanceSummary.net, displayCurrency)}
                         </span>

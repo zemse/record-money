@@ -1,12 +1,23 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, generateUUID, now, getCurrentDate, getCurrentTime } from '../db'
 import type { ExpenseRecord, ShareType } from '../types'
 import { DEFAULT_GROUP_UUID } from '../types'
 import { RecordForm } from '../components/RecordForm'
 import { RecordList } from '../components/RecordList'
+import {
+  generateExportUrl,
+  exportToFile,
+  copyToClipboard,
+  getUsersFromRecords,
+  getGroupsFromRecords,
+  canShareFile,
+  shareFile,
+} from '../utils/dataTransport'
 
 export function RecordsPage() {
+  const navigate = useNavigate()
   const [showForm, setShowForm] = useState(false)
   const [editingRecord, setEditingRecord] = useState<ExpenseRecord | null>(null)
 
@@ -17,6 +28,10 @@ export function RecordsPage() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [showFilters, setShowFilters] = useState(false)
+
+  // Export states
+  const [showExportMenu, setShowExportMenu] = useState(false)
+  const [exportMessage, setExportMessage] = useState('')
 
   const records = useLiveQuery(() => db.records.orderBy('date').reverse().toArray())
   const users = useLiveQuery(() => db.users.toArray())
@@ -68,6 +83,51 @@ export function RecordsPage() {
     setSelectedCategory('all')
     setDateFrom('')
     setDateTo('')
+  }
+
+  // Export handlers
+  const handleExportUrl = async (recordsToExport: ExpenseRecord[]) => {
+    if (!users) return
+
+    const exportUsers = getUsersFromRecords(recordsToExport, users)
+    const result = generateExportUrl(recordsToExport, exportUsers)
+
+    if (result.success) {
+      const copied = await copyToClipboard(result.url)
+      setExportMessage(copied ? 'Link copied to clipboard!' : 'Failed to copy link')
+    } else {
+      setExportMessage(result.error)
+    }
+
+    setShowExportMenu(false)
+    setTimeout(() => setExportMessage(''), 3000)
+  }
+
+  const handleExportFile = (recordsToExport: ExpenseRecord[]) => {
+    if (!users || !groups) return
+
+    const exportUsers = getUsersFromRecords(recordsToExport, users)
+    const exportGroups = getGroupsFromRecords(recordsToExport, groups)
+
+    exportToFile(recordsToExport, exportUsers, exportGroups)
+    setShowExportMenu(false)
+    setExportMessage('File downloaded!')
+    setTimeout(() => setExportMessage(''), 3000)
+  }
+
+  const handleShareFile = async (recordsToExport: ExpenseRecord[]) => {
+    if (!users || !groups) return
+
+    const exportUsers = getUsersFromRecords(recordsToExport, users)
+    const exportGroups = getGroupsFromRecords(recordsToExport, groups)
+
+    const result = await shareFile(recordsToExport, exportUsers, exportGroups)
+    setShowExportMenu(false)
+
+    if (!result.success && result.error !== 'Share cancelled') {
+      setExportMessage(result.error || 'Share failed')
+      setTimeout(() => setExportMessage(''), 3000)
+    }
   }
 
   const handleAdd = async (data: Omit<ExpenseRecord, 'uuid' | 'createdAt' | 'updatedAt'>) => {
@@ -178,13 +238,86 @@ export function RecordsPage() {
               : `${records?.length || 0} ${records?.length === 1 ? 'record' : 'records'}`}
           </p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-hover hover:shadow-md"
-        >
-          + Add Record
-        </button>
+        <div className="flex gap-2">
+          {/* Import button */}
+          <button
+            onClick={() => navigate('/import')}
+            className="rounded-xl border border-border-default bg-surface px-4 py-2.5 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-tertiary"
+          >
+            Import
+          </button>
+
+          {/* Export menu */}
+          <div className="relative">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              disabled={!records || records.length === 0}
+              className="rounded-xl border border-border-default bg-surface px-4 py-2.5 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-tertiary disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Export
+            </button>
+
+            {showExportMenu && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
+                <div className="absolute right-0 z-20 mt-2 w-56 rounded-xl border border-border-default bg-surface p-2 shadow-lg">
+                  <p className="px-3 py-1 text-xs font-medium text-content-secondary">
+                    {hasActiveFilters
+                      ? `Export ${filteredRecords.length} filtered records`
+                      : `Export all ${records?.length || 0} records`}
+                  </p>
+
+                  <button
+                    onClick={() => handleExportUrl(filteredRecords)}
+                    className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
+                  >
+                    <span>🔗</span>
+                    <span>Copy Share Link</span>
+                  </button>
+
+                  <button
+                    onClick={() => handleExportFile(filteredRecords)}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
+                  >
+                    <span>📁</span>
+                    <span>Download File</span>
+                  </button>
+
+                  {canShareFile() && (
+                    <button
+                      onClick={() => handleShareFile(filteredRecords)}
+                      className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
+                    >
+                      <span>📤</span>
+                      <span>Share...</span>
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+
+          <button
+            onClick={() => setShowForm(true)}
+            className="rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-all hover:bg-primary-hover hover:shadow-md"
+          >
+            + Add Record
+          </button>
+        </div>
       </div>
+
+      {/* Export message */}
+      {exportMessage && (
+        <div
+          className={`rounded-xl px-4 py-3 text-sm ${
+            exportMessage.includes('copied') || exportMessage.includes('downloaded')
+              ? 'bg-green-50 text-green-600 dark:bg-green-500/10 dark:text-green-400'
+              : 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400'
+          }`}
+        >
+          {exportMessage}
+        </div>
+      )}
 
       {/* Search and Filter Section */}
       {records && records.length > 0 && (

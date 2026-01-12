@@ -6,6 +6,7 @@ import { RecordsPage } from './pages/RecordsPage'
 import { UsersPage } from './pages/UsersPage'
 import { GroupsPage } from './pages/GroupsPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { ImportPage } from './pages/ImportPage'
 import {
   initializeSettings,
   initializeDefaultGroup,
@@ -35,6 +36,7 @@ function App() {
             <Route path="users" element={<UsersPage />} />
             <Route path="groups" element={<GroupsPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="import" element={<ImportPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

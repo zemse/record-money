@@ -15,9 +15,7 @@ export const DEFAULT_CATEGORIES: Category[] = [
 
 // Get icon for a category by name
 export function getCategoryIcon(categoryName: string, categories: Category[]): string {
-  const category = categories.find(
-    (c) => c.name.toLowerCase() === categoryName.toLowerCase()
-  )
+  const category = categories.find((c) => c.name.toLowerCase() === categoryName.toLowerCase())
   return category?.icon || '💰'
 }
 

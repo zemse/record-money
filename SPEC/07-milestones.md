@@ -110,30 +110,30 @@ User can see Dashboard with balance summaries, filter records, and track who owe
 
 ### Tasks
 
-- [ ] File export
-  - [ ] Export selected records
-  - [ ] Export entire group
-  - [ ] `.recordmoney` file generation
-- [ ] File import
-  - [ ] File picker UI
-  - [ ] JSON parsing and validation
-  - [ ] UUID conflict detection
-  - [ ] Exact-match duplicate detection
-  - [ ] Import preview UI
-  - [ ] Merge/keep-new options
-- [ ] URL export
-  - [ ] Base64 encoding
-  - [ ] 2000 char limit check
-  - [ ] Copy-to-clipboard
-  - [ ] "URL too large" error handling
-- [ ] URL import
-  - [ ] `/import?data=...` route
-  - [ ] Parse and validate
-  - [ ] Same dedup flow as file import
-- [ ] Manual duplicate finder
-  - [ ] Scan existing records
-  - [ ] Show potential duplicates
-  - [ ] Merge/keep UI
+- [x] File export
+  - [x] Export selected records
+  - [x] Export entire group
+  - [x] `.recordmoney` file generation
+- [x] File import
+  - [x] File picker UI
+  - [x] JSON parsing and validation
+  - [x] UUID conflict detection
+  - [x] Exact-match duplicate detection
+  - [x] Import preview UI
+  - [x] Merge/keep-new options
+- [x] URL export
+  - [x] Base64 encoding
+  - [x] 2000 char limit check
+  - [x] Copy-to-clipboard
+  - [x] "URL too large" error handling
+- [x] URL import
+  - [x] `/import?data=...` route
+  - [x] Parse and validate
+  - [x] Same dedup flow as file import
+- [x] Manual duplicate finder
+  - [x] Scan existing records
+  - [x] Show potential duplicates
+  - [x] Merge/keep UI
 
 ### Deliverable
 

@@ -1,10 +1,12 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, updateSettings } from '../db'
 import { useTheme } from '../hooks/useTheme'
-import type { Theme, Category } from '../types'
+import type { Theme, Category, ExpenseRecord } from '../types'
 import { EmojiPicker } from '../components/EmojiPicker'
 import { generateCategoryId } from '../constants/categories'
+import { findPotentialDuplicates, type PotentialDuplicate } from '../utils/deduplication'
 
 const themeOptions: { value: Theme; label: string; icon: string }[] = [
   { value: 'light', label: 'Light', icon: '☀️' },
@@ -15,9 +17,11 @@ const themeOptions: { value: Theme; label: string; icon: string }[] = [
 const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'SGD', 'AED', 'THB']
 
 export function SettingsPage() {
+  const navigate = useNavigate()
   const settings = useLiveQuery(() => db.settings.get('main'))
   const users = useLiveQuery(() => db.users.toArray())
   const categories = useLiveQuery(() => db.categories.toArray())
+  const records = useLiveQuery(() => db.records.toArray())
   const { theme, setTheme } = useTheme()
 
   // Category management state
@@ -27,6 +31,11 @@ export function SettingsPage() {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
   const [editingCategory, setEditingCategory] = useState<Category | null>(null)
   const [categoryError, setCategoryError] = useState('')
+
+  // Duplicate finder state
+  const [showDuplicateFinder, setShowDuplicateFinder] = useState(false)
+  const [duplicates, setDuplicates] = useState<PotentialDuplicate[]>([])
+  const [scanningDuplicates, setScanningDuplicates] = useState(false)
 
   const currentUser = users?.find((u) => u.email === settings?.currentUserEmail)
 
@@ -79,8 +88,7 @@ export function SettingsPage() {
     // Check for duplicate name (excluding current)
     const existing = categories?.find(
       (c) =>
-        c.id !== editingCategory.id &&
-        c.name.toLowerCase() === newCategoryName.trim().toLowerCase()
+        c.id !== editingCategory.id && c.name.toLowerCase() === newCategoryName.trim().toLowerCase()
     )
     if (existing) {
       setCategoryError('A category with this name already exists')
@@ -119,6 +127,40 @@ export function SettingsPage() {
     setNewCategoryName('')
     setNewCategoryIcon('💰')
     setCategoryError('')
+  }
+
+  // Duplicate finder functions
+  const handleScanDuplicates = () => {
+    if (!records) return
+
+    setScanningDuplicates(true)
+    setShowDuplicateFinder(true)
+
+    // Use setTimeout to allow UI to update before heavy computation
+    setTimeout(() => {
+      const found = findPotentialDuplicates(records, { dateBuffer: 1, minSimilarity: 0.7 })
+      setDuplicates(found)
+      setScanningDuplicates(false)
+    }, 100)
+  }
+
+  const handleMergeDuplicates = async (record1: ExpenseRecord, record2: ExpenseRecord) => {
+    if (!window.confirm('Keep the first record and delete the second?')) return
+
+    await db.records.delete(record2.uuid)
+    setDuplicates(
+      duplicates.filter(
+        (d) => !(d.record1.uuid === record1.uuid && d.record2.uuid === record2.uuid)
+      )
+    )
+  }
+
+  const handleIgnoreDuplicate = (record1: ExpenseRecord, record2: ExpenseRecord) => {
+    setDuplicates(
+      duplicates.filter(
+        (d) => !(d.record1.uuid === record1.uuid && d.record2.uuid === record2.uuid)
+      )
+    )
   }
 
   return (
@@ -220,9 +262,7 @@ export function SettingsPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-medium text-content">Categories</h2>
-              <p className="mt-1 text-sm text-content-secondary">
-                Manage expense categories
-              </p>
+              <p className="mt-1 text-sm text-content-secondary">Manage expense categories</p>
             </div>
             {!showCategoryForm && (
               <button
@@ -271,9 +311,7 @@ export function SettingsPage() {
                   className="flex-1 rounded-lg border border-border-default bg-surface px-3 py-2 text-content transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 />
               </div>
-              {categoryError && (
-                <p className="mt-2 text-sm text-red-500">{categoryError}</p>
-              )}
+              {categoryError && <p className="mt-2 text-sm text-red-500">{categoryError}</p>}
               <div className="mt-3 flex gap-2">
                 <button
                   onClick={cancelCategoryForm}
@@ -335,14 +373,122 @@ export function SettingsPage() {
             All your data is stored locally in your browser. No data is sent to any server.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
-            <button className="rounded-lg bg-surface-tertiary px-4 py-2 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-hover">
+            <button
+              onClick={() => navigate('/records')}
+              className="rounded-lg bg-surface-tertiary px-4 py-2 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-hover"
+            >
               Export Data
             </button>
-            <button className="rounded-lg bg-surface-tertiary px-4 py-2 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-hover">
+            <button
+              onClick={() => navigate('/import')}
+              className="rounded-lg bg-surface-tertiary px-4 py-2 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-hover"
+            >
               Import Data
+            </button>
+            <button
+              onClick={handleScanDuplicates}
+              disabled={!records || records.length === 0}
+              className="rounded-lg bg-surface-tertiary px-4 py-2 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-hover disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Find Duplicates
             </button>
           </div>
         </div>
+
+        {/* Duplicate Finder Results */}
+        {showDuplicateFinder && (
+          <div className="rounded-2xl border border-border-default bg-surface p-5">
+            <div className="flex items-center justify-between">
+              <h2 className="font-medium text-content">Duplicate Finder</h2>
+              <button
+                onClick={() => {
+                  setShowDuplicateFinder(false)
+                  setDuplicates([])
+                }}
+                className="text-sm text-content-secondary hover:text-content"
+              >
+                Close
+              </button>
+            </div>
+
+            {scanningDuplicates ? (
+              <div className="mt-4 text-center">
+                <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                <p className="mt-2 text-sm text-content-secondary">Scanning records...</p>
+              </div>
+            ) : duplicates.length === 0 ? (
+              <div className="mt-4 rounded-xl bg-green-50 px-4 py-3 text-center dark:bg-green-500/10">
+                <p className="text-sm text-green-600 dark:text-green-400">
+                  No potential duplicates found!
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3">
+                <p className="text-sm text-content-secondary">
+                  Found {duplicates.length} potential duplicate{duplicates.length !== 1 && 's'}
+                </p>
+
+                {duplicates.map((dup, index) => (
+                  <div
+                    key={`${dup.record1.uuid}-${dup.record2.uuid}`}
+                    className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10"
+                  >
+                    <div className="mb-3 flex items-center justify-between">
+                      <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                        Pair {index + 1} • {Math.round(dup.similarity * 100)}% similar
+                      </span>
+                      <span className="text-xs text-amber-600/70 dark:text-amber-400/70">
+                        {dup.reasons.join(' • ')}
+                      </span>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-lg bg-white p-3 dark:bg-surface">
+                        <p className="font-medium text-content">
+                          {dup.record1.icon} {dup.record1.title}
+                        </p>
+                        <p className="text-sm text-content-secondary">
+                          {dup.record1.currency} {dup.record1.amount.toLocaleString()} •{' '}
+                          {dup.record1.date}
+                        </p>
+                      </div>
+                      <div className="rounded-lg bg-white p-3 dark:bg-surface">
+                        <p className="font-medium text-content">
+                          {dup.record2.icon} {dup.record2.title}
+                        </p>
+                        <p className="text-sm text-content-secondary">
+                          {dup.record2.currency} {dup.record2.amount.toLocaleString()} •{' '}
+                          {dup.record2.date}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        onClick={() => handleMergeDuplicates(dup.record1, dup.record2)}
+                        className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+                      >
+                        Keep First
+                      </button>
+                      <button
+                        onClick={() => handleMergeDuplicates(dup.record2, dup.record1)}
+                        className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+                      >
+                        Keep Second
+                      </button>
+                      <button
+                        onClick={() => handleIgnoreDuplicate(dup.record1, dup.record2)}
+                        className="rounded-lg bg-surface-tertiary px-3 py-1.5 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-hover"
+                      >
+                        Keep Both
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* About */}
         <div className="rounded-2xl border border-border-default bg-surface p-5">

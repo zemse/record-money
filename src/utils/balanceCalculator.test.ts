@@ -11,9 +11,7 @@ import {
 } from './balanceCalculator'
 
 // Helper to create test records
-function createTestRecord(
-  overrides: Partial<ExpenseRecord> = {}
-): ExpenseRecord {
+function createTestRecord(overrides: Partial<ExpenseRecord> = {}): ExpenseRecord {
   return {
     uuid: 'test-uuid',
     title: 'Test Expense',
@@ -133,9 +131,7 @@ describe('calculateShares', () => {
     })
 
     it('handles single participant', () => {
-      const shares = calculateShares(100, 'equal', [
-        { email: 'a@test.com', share: 1 },
-      ])
+      const shares = calculateShares(100, 'equal', [{ email: 'a@test.com', share: 1 }])
       expect(shares.get('a@test.com')).toBe(100)
     })
   })

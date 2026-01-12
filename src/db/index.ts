@@ -252,9 +252,7 @@ export async function changeUserEmail(
   // Update groups
   for (const group of groups) {
     if (group.members.includes(normalizedOld)) {
-      const newMembers = group.members.map((m) =>
-        m === normalizedOld ? normalizedNew : m
-      )
+      const newMembers = group.members.map((m) => (m === normalizedOld ? normalizedNew : m))
       await db.groups.update(group.uuid, {
         members: newMembers,
         updatedAt: now(),
