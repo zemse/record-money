@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { Link } from 'react-router-dom'
 import { db, generateUUID, now, getCurrentDate, getCurrentTime } from '../db'
@@ -10,17 +10,21 @@ import {
   formatAmount,
 } from '../utils/balanceCalculator'
 import { getExchangeRates, convertAmount, getRatesAge } from '../utils/currencyConverter'
+import { SpendingChart } from '../components/SpendingChart'
+import { PeriodSelector } from '../components/PeriodSelector'
 
 export function DashboardPage() {
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null)
   const [exchangeRates, setExchangeRates] = useState<ExchangeRates | null>(null)
   const [ratesLoading, setRatesLoading] = useState(false)
   const [ratesError, setRatesError] = useState<string | null>(null)
+  const [chartPeriod, setChartPeriod] = useState<string>('month')
 
   const settings = useLiveQuery(() => db.settings.get('main'))
   const users = useLiveQuery(() => db.users.toArray())
   const groups = useLiveQuery(() => db.groups.toArray())
   const records = useLiveQuery(() => db.records.toArray())
+  const categories = useLiveQuery(() => db.categories.toArray())
 
   // Fetch exchange rates on mount and when needed
   const fetchRates = useCallback(async (force = false) => {
@@ -56,6 +60,32 @@ export function DashboardPage() {
     const user = users?.find((u) => u.email === email)
     return user?.alias || email
   }
+
+  // Filter records for chart based on period (must be before any conditional returns)
+  const chartRecords = useMemo(() => {
+    if (!records) return []
+
+    const now = new Date()
+    let startDate: Date
+
+    switch (chartPeriod) {
+      case 'week':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7)
+        break
+      case 'month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1)
+        break
+      case 'year':
+        startDate = new Date(now.getFullYear(), 0, 1)
+        break
+      case 'all':
+      default:
+        return records
+    }
+
+    const startDateStr = startDate.toISOString().split('T')[0]
+    return records.filter((r) => r.date >= startDateStr)
+  }, [records, chartPeriod])
 
   // Create a settlement record
   const handleSettleUp = async (
@@ -267,6 +297,21 @@ export function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Spending by Category Chart */}
+      {categories && categories.length > 0 && chartRecords.length > 0 && (
+        <div className="rounded-2xl border border-border-default bg-surface p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-content">Spending by Category</h2>
+            <PeriodSelector value={chartPeriod} onChange={setChartPeriod} />
+          </div>
+          <SpendingChart
+            records={chartRecords}
+            categories={categories}
+            displayCurrency={displayCurrency}
+          />
+        </div>
+      )}
 
       {/* Detailed Balances - Who owes you / You owe */}
       <div className="grid gap-4 lg:grid-cols-2">

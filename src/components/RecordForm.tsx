@@ -12,11 +12,36 @@ interface RecordFormProps {
   initialData: Omit<ExpenseRecord, 'uuid' | 'createdAt' | 'updatedAt'>
   users: User[]
   groups: Group[]
+  currentUserEmail?: string
   onSubmit: (data: Omit<ExpenseRecord, 'uuid' | 'createdAt' | 'updatedAt'>) => void
   onCancel: () => void
 }
 
-export function RecordForm({ initialData, users, groups, onSubmit, onCancel }: RecordFormProps) {
+// Detect if initial data represents a split expense
+function isSplitExpense(data: Omit<ExpenseRecord, 'uuid' | 'createdAt' | 'updatedAt'>): boolean {
+  // Multiple people paid
+  if (data.paidBy.length > 1) return true
+  // Multiple people to split with
+  if (data.paidFor.length > 1) return true
+  // One person paid, one person it's for, but they're different people
+  if (
+    data.paidBy.length === 1 &&
+    data.paidFor.length === 1 &&
+    data.paidBy[0].email !== data.paidFor[0].email
+  ) {
+    return true
+  }
+  return false
+}
+
+export function RecordForm({
+  initialData,
+  users,
+  groups,
+  currentUserEmail,
+  onSubmit,
+  onCancel,
+}: RecordFormProps) {
   const [title, setTitle] = useState(initialData.title)
   const [description, setDescription] = useState(initialData.description)
   const [amount, setAmount] = useState(initialData.amount.toString())
@@ -33,6 +58,9 @@ export function RecordForm({ initialData, users, groups, onSubmit, onCancel }: R
   )
   const [comments, setComments] = useState(initialData.comments)
   const [error, setError] = useState('')
+
+  // Split mode - defaults to OFF for new records, ON for split expenses being edited
+  const [isSplitEnabled, setIsSplitEnabled] = useState(() => isSplitExpense(initialData))
 
   // Fetch categories from database
   const categories = useLiveQuery(() => db.categories.toArray())
@@ -65,26 +93,40 @@ export function RecordForm({ initialData, users, groups, onSubmit, onCancel }: R
       return
     }
 
-    if (paidByEmails.length === 0) {
-      setError('Select who paid')
-      return
+    let finalPaidBy: Participant[]
+    let finalPaidFor: Participant[]
+
+    if (!isSplitEnabled) {
+      // Personal expense - auto-fill with current user
+      if (!currentUserEmail) {
+        setError('Set yourself as current user in Settings to record personal expenses')
+        return
+      }
+      finalPaidBy = [{ email: currentUserEmail, share: parsedAmount }]
+      finalPaidFor = [{ email: currentUserEmail, share: 1 }]
+    } else {
+      // Split expense - validate selections
+      if (paidByEmails.length === 0) {
+        setError('Select who paid')
+        return
+      }
+
+      if (paidForEmails.length === 0) {
+        setError('Select who this is for')
+        return
+      }
+
+      // Create participants with equal shares by default
+      finalPaidBy = paidByEmails.map((email) => ({
+        email,
+        share: parsedAmount / paidByEmails.length,
+      }))
+
+      finalPaidFor = paidForEmails.map((email) => ({
+        email,
+        share: 1, // Equal share for equal split
+      }))
     }
-
-    if (paidForEmails.length === 0) {
-      setError('Select who this is for')
-      return
-    }
-
-    // Create participants with equal shares by default
-    const paidBy: Participant[] = paidByEmails.map((email) => ({
-      email,
-      share: parsedAmount / paidByEmails.length,
-    }))
-
-    const paidFor: Participant[] = paidForEmails.map((email) => ({
-      email,
-      share: 1, // Equal share for equal split
-    }))
 
     onSubmit({
       title: title.trim(),
@@ -95,8 +137,8 @@ export function RecordForm({ initialData, users, groups, onSubmit, onCancel }: R
       date,
       time,
       icon,
-      paidBy,
-      paidFor,
+      paidBy: finalPaidBy,
+      paidFor: finalPaidFor,
       shareType,
       groupId,
       comments: comments.trim(),
@@ -191,62 +233,91 @@ export function RecordForm({ initialData, users, groups, onSubmit, onCancel }: R
         </div>
       </div>
 
-      <div>
-        <label className={labelClassName}>Group</label>
-        <select
-          value={groupId}
-          onChange={(e) => setGroupId(e.target.value)}
-          className={inputClassName}
-        >
-          {groups.map((g) => (
-            <option key={g.uuid} value={g.uuid}>
-              {g.name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className={labelClassName}>Paid By</label>
-        <div className="mt-1">
-          <UserPicker
-            users={users}
-            selected={paidByEmails}
-            onChange={setPaidByEmails}
-            multiple
-            placeholder="Select who paid..."
-            onAddUser={handleAddUser}
-          />
+      {/* Split Toggle */}
+      <div className="flex items-center justify-between rounded-xl bg-surface-tertiary px-4 py-3">
+        <div>
+          <span className="font-medium text-content">Split this expense</span>
+          <p className="text-sm text-content-secondary">Share with others</p>
         </div>
-      </div>
-
-      <div>
-        <label className={labelClassName}>Paid For</label>
-        <div className="mt-1">
-          <UserPicker
-            users={users}
-            selected={paidForEmails}
-            onChange={setPaidForEmails}
-            multiple
-            placeholder="Select who this is for..."
-            onAddUser={handleAddUser}
-          />
-        </div>
-      </div>
-
-      <div>
-        <label className={labelClassName}>Split Type</label>
-        <select
-          value={shareType}
-          onChange={(e) => setShareType(e.target.value as ShareType)}
-          className={inputClassName}
+        <button
+          type="button"
+          onClick={() => setIsSplitEnabled(!isSplitEnabled)}
+          className={`relative h-6 w-11 rounded-full transition-colors ${
+            isSplitEnabled ? 'bg-primary' : 'bg-content-tertiary'
+          }`}
         >
-          <option value="equal">Equal Split</option>
-          <option value="percentage">By Percentage</option>
-          <option value="exact">Exact Amounts</option>
-          <option value="shares">By Shares (Ratio)</option>
-        </select>
+          <span
+            className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+              isSplitEnabled ? 'translate-x-5' : ''
+            }`}
+          />
+        </button>
       </div>
+
+      {/* Show Group selector only when splitting */}
+      {isSplitEnabled && (
+        <div>
+          <label className={labelClassName}>Group</label>
+          <select
+            value={groupId}
+            onChange={(e) => setGroupId(e.target.value)}
+            className={inputClassName}
+          >
+            {groups.map((g) => (
+              <option key={g.uuid} value={g.uuid}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
+      {/* Split controls - only show when split is enabled */}
+      {isSplitEnabled && (
+        <>
+          <div>
+            <label className={labelClassName}>Paid By</label>
+            <div className="mt-1">
+              <UserPicker
+                users={users}
+                selected={paidByEmails}
+                onChange={setPaidByEmails}
+                multiple
+                placeholder="Select who paid..."
+                onAddUser={handleAddUser}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className={labelClassName}>Paid For</label>
+            <div className="mt-1">
+              <UserPicker
+                users={users}
+                selected={paidForEmails}
+                onChange={setPaidForEmails}
+                multiple
+                placeholder="Select who this is for..."
+                onAddUser={handleAddUser}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className={labelClassName}>Split Type</label>
+            <select
+              value={shareType}
+              onChange={(e) => setShareType(e.target.value as ShareType)}
+              className={inputClassName}
+            >
+              <option value="equal">Equal Split</option>
+              <option value="percentage">By Percentage</option>
+              <option value="exact">Exact Amounts</option>
+              <option value="shares">By Shares (Ratio)</option>
+            </select>
+          </div>
+        </>
+      )}
 
       <div>
         <label className={labelClassName}>Description</label>

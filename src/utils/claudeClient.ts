@@ -1,7 +1,8 @@
 // Claude API client for expense parsing and chat
 
+import { DEFAULT_CLAUDE_MODEL, type ClaudeModel } from '../types'
+
 const CLAUDE_API_URL = 'https://api.anthropic.com/v1/messages'
-const CLAUDE_MODEL = 'claude-sonnet-4-20250514'
 
 export interface Message {
   role: 'user' | 'assistant'
@@ -19,7 +20,10 @@ export interface ClaudeError {
 }
 
 // Validate API key by making a simple request
-export async function validateApiKey(apiKey: string): Promise<ClaudeResponse | ClaudeError> {
+export async function validateApiKey(
+  apiKey: string,
+  model: ClaudeModel = DEFAULT_CLAUDE_MODEL
+): Promise<ClaudeResponse | ClaudeError> {
   try {
     const response = await fetch(CLAUDE_API_URL, {
       method: 'POST',
@@ -30,7 +34,7 @@ export async function validateApiKey(apiKey: string): Promise<ClaudeResponse | C
         'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
-        model: CLAUDE_MODEL,
+        model,
         max_tokens: 10,
         messages: [{ role: 'user', content: 'Hi' }],
       }),
@@ -162,7 +166,8 @@ export async function sendMessage(
       owedBy: { email: string; amount: number; currency: string }[]
       netBalance: number
     } | null
-  }
+  },
+  model: ClaudeModel = DEFAULT_CLAUDE_MODEL
 ): Promise<ClaudeResponse | ClaudeError> {
   try {
     // Build context string
@@ -224,7 +229,7 @@ export async function sendMessage(
         'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
-        model: CLAUDE_MODEL,
+        model,
         max_tokens: 1024,
         system: systemPrompt,
         messages: messages.map((m) => ({

@@ -3,9 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, updateSettings } from '../db'
 import { useTheme } from '../hooks/useTheme'
-import type { Theme, Category, ExpenseRecord } from '../types'
-import { EmojiPicker } from '../components/EmojiPicker'
-import { generateCategoryId } from '../constants/categories'
+import type { Theme, ExpenseRecord } from '../types'
+import { CLAUDE_MODELS, DEFAULT_CLAUDE_MODEL } from '../types'
 import { findPotentialDuplicates, type PotentialDuplicate } from '../utils/deduplication'
 import { validateApiKey } from '../utils/claudeClient'
 
@@ -32,14 +31,6 @@ export function SettingsPage() {
     'idle'
   )
   const [apiKeyError, setApiKeyError] = useState('')
-
-  // Category management state
-  const [showCategoryForm, setShowCategoryForm] = useState(false)
-  const [newCategoryName, setNewCategoryName] = useState('')
-  const [newCategoryIcon, setNewCategoryIcon] = useState('💰')
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false)
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null)
-  const [categoryError, setCategoryError] = useState('')
 
   // Duplicate finder state
   const [showDuplicateFinder, setShowDuplicateFinder] = useState(false)
@@ -84,88 +75,6 @@ export function SettingsPage() {
 
   const handleClearCurrentUser = async () => {
     await updateSettings({ currentUserEmail: undefined })
-  }
-
-  const handleAddCategory = async () => {
-    setCategoryError('')
-    if (!newCategoryName.trim()) {
-      setCategoryError('Category name is required')
-      return
-    }
-
-    // Check for duplicate name
-    const existing = categories?.find(
-      (c) => c.name.toLowerCase() === newCategoryName.trim().toLowerCase()
-    )
-    if (existing) {
-      setCategoryError('A category with this name already exists')
-      return
-    }
-
-    const newCategory: Category = {
-      id: generateCategoryId(newCategoryName),
-      name: newCategoryName.trim(),
-      icon: newCategoryIcon,
-      isSystem: false,
-    }
-
-    await db.categories.add(newCategory)
-    setNewCategoryName('')
-    setNewCategoryIcon('💰')
-    setShowCategoryForm(false)
-  }
-
-  const handleUpdateCategory = async () => {
-    if (!editingCategory) return
-    setCategoryError('')
-
-    if (!newCategoryName.trim()) {
-      setCategoryError('Category name is required')
-      return
-    }
-
-    // Check for duplicate name (excluding current)
-    const existing = categories?.find(
-      (c) =>
-        c.id !== editingCategory.id && c.name.toLowerCase() === newCategoryName.trim().toLowerCase()
-    )
-    if (existing) {
-      setCategoryError('A category with this name already exists')
-      return
-    }
-
-    await db.categories.update(editingCategory.id, {
-      name: newCategoryName.trim(),
-      icon: newCategoryIcon,
-    })
-
-    setEditingCategory(null)
-    setNewCategoryName('')
-    setNewCategoryIcon('💰')
-    setShowCategoryForm(false)
-  }
-
-  const handleDeleteCategory = async (category: Category) => {
-    if (category.isSystem) return
-    if (window.confirm(`Delete category "${category.name}"?`)) {
-      await db.categories.delete(category.id)
-    }
-  }
-
-  const startEditCategory = (category: Category) => {
-    setEditingCategory(category)
-    setNewCategoryName(category.name)
-    setNewCategoryIcon(category.icon)
-    setShowCategoryForm(true)
-    setCategoryError('')
-  }
-
-  const cancelCategoryForm = () => {
-    setShowCategoryForm(false)
-    setEditingCategory(null)
-    setNewCategoryName('')
-    setNewCategoryIcon('💰')
-    setCategoryError('')
   }
 
   // Duplicate finder functions
@@ -304,7 +213,7 @@ export function SettingsPage() {
           </p>
 
           {settings?.claudeApiKey ? (
-            <div className="mt-4">
+            <div className="mt-4 space-y-4">
               <div className="flex items-center justify-between rounded-xl bg-green-50 px-4 py-3 dark:bg-green-500/10">
                 <div className="flex items-center gap-2">
                   <span className="text-green-600 dark:text-green-400">✓</span>
@@ -318,6 +227,35 @@ export function SettingsPage() {
                 >
                   Remove
                 </button>
+              </div>
+
+              {/* Model Selection */}
+              <div>
+                <label className="block text-sm font-medium text-content">Model</label>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {CLAUDE_MODELS.map((model) => (
+                    <button
+                      key={model.id}
+                      onClick={() => updateSettings({ claudeModel: model.id })}
+                      className={`rounded-lg px-3 py-2 text-left transition-all ${
+                        (settings?.claudeModel || DEFAULT_CLAUDE_MODEL) === model.id
+                          ? 'bg-primary text-white shadow-sm'
+                          : 'bg-surface-tertiary text-content-secondary hover:bg-surface-hover'
+                      }`}
+                    >
+                      <span className="block text-sm font-medium">{model.name}</span>
+                      <span
+                        className={`block text-xs ${
+                          (settings?.claudeModel || DEFAULT_CLAUDE_MODEL) === model.id
+                            ? 'text-white/80'
+                            : 'text-content-tertiary'
+                        }`}
+                      >
+                        {model.description}
+                      </span>
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           ) : (
@@ -385,110 +323,24 @@ export function SettingsPage() {
 
         {/* Categories */}
         <div className="rounded-2xl border border-border-default bg-surface p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="font-medium text-content">Categories</h2>
-              <p className="mt-1 text-sm text-content-secondary">Manage expense categories</p>
-            </div>
-            {!showCategoryForm && (
-              <button
-                onClick={() => setShowCategoryForm(true)}
-                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
-              >
-                + Add
-              </button>
-            )}
+          <div>
+            <h2 className="font-medium text-content">Categories</h2>
+            <p className="mt-1 text-sm text-content-secondary">Available expense categories</p>
           </div>
 
-          {/* Add/Edit Category Form */}
-          {showCategoryForm && (
-            <div className="mt-4 rounded-xl border border-border-default bg-surface-tertiary p-4">
-              <h3 className="mb-3 text-sm font-medium text-content">
-                {editingCategory ? 'Edit Category' : 'New Category'}
-              </h3>
-              <div className="flex gap-3">
-                {/* Icon picker button */}
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-                    className="flex h-10 w-10 items-center justify-center rounded-lg border border-border-default bg-surface text-xl transition-colors hover:bg-surface-hover"
-                  >
-                    {newCategoryIcon}
-                  </button>
-                  {showEmojiPicker && (
-                    <div className="absolute left-0 top-12 z-10">
-                      <EmojiPicker
-                        onSelect={(emoji) => {
-                          setNewCategoryIcon(emoji)
-                          setShowEmojiPicker(false)
-                        }}
-                        onClose={() => setShowEmojiPicker(false)}
-                      />
-                    </div>
-                  )}
-                </div>
-                {/* Name input */}
-                <input
-                  type="text"
-                  value={newCategoryName}
-                  onChange={(e) => setNewCategoryName(e.target.value)}
-                  placeholder="Category name"
-                  className="flex-1 rounded-lg border border-border-default bg-surface px-3 py-2 text-content transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-              {categoryError && <p className="mt-2 text-sm text-red-500">{categoryError}</p>}
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={cancelCategoryForm}
-                  className="rounded-lg bg-surface px-3 py-1.5 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-hover"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={editingCategory ? handleUpdateCategory : handleAddCategory}
-                  className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
-                >
-                  {editingCategory ? 'Save' : 'Add'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Category List */}
+          {/* Category List (Read-only) */}
           <div className="mt-4 space-y-2">
-            {categories?.map((category) => (
-              <div
-                key={category.id}
-                className="flex items-center justify-between rounded-lg bg-surface-tertiary px-3 py-2"
-              >
-                <div className="flex items-center gap-2">
+            {categories
+              ?.filter((c) => c.name !== 'Settlement')
+              .map((category) => (
+                <div
+                  key={category.id}
+                  className="flex items-center gap-2 rounded-lg bg-surface-tertiary px-3 py-2"
+                >
                   <span className="text-lg">{category.icon}</span>
                   <span className="text-sm font-medium text-content">{category.name}</span>
-                  {category.isSystem && (
-                    <span className="rounded bg-content-tertiary/20 px-1.5 py-0.5 text-xs text-content-tertiary">
-                      System
-                    </span>
-                  )}
                 </div>
-                {!category.isSystem && (
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => startEditCategory(category)}
-                      className="rounded px-2 py-1 text-xs font-medium text-primary hover:bg-primary-light"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDeleteCategory(category)}
-                      className="rounded px-2 py-1 text-xs font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
+              ))}
           </div>
         </div>
 
@@ -633,6 +485,24 @@ export function SettingsPage() {
             Decentralized expense tracking and splitting app. Built with React, TypeScript, and
             Tailwind CSS.
           </p>
+        </div>
+
+        {/* Feedback */}
+        <div className="rounded-2xl border border-border-default bg-surface p-5">
+          <h2 className="font-medium text-content">Feedback</h2>
+          <p className="mt-1 text-sm text-content-secondary">
+            Found a bug or have a feature request?
+          </p>
+          <a
+            href={'https://github.com/' + 'zemse' + '/record-money/issues/new'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-flex items-center gap-2 rounded-xl bg-surface-tertiary px-4 py-2.5 text-sm font-medium text-content transition-colors hover:bg-surface-hover"
+          >
+            <span>📝</span>
+            <span>Submit Feedback on GitHub</span>
+            <span className="text-content-tertiary">↗</span>
+          </a>
         </div>
       </div>
     </div>

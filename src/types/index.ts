@@ -44,9 +44,26 @@ export const DEFAULT_GROUP_UUID = 'default-group'
 
 export type Theme = 'light' | 'dark' | 'system'
 
+// Available Claude models
+export type ClaudeModel =
+  | 'claude-haiku-3-5-20241022'
+  | 'claude-sonnet-4-20250514'
+  | 'claude-opus-4-20250514'
+  | 'claude-opus-4-5-20251101'
+
+export const CLAUDE_MODELS: { id: ClaudeModel; name: string; description: string }[] = [
+  { id: 'claude-haiku-3-5-20241022', name: 'Haiku 3.5', description: 'Fast & affordable' },
+  { id: 'claude-sonnet-4-20250514', name: 'Sonnet 4', description: 'Balanced performance' },
+  { id: 'claude-opus-4-20250514', name: 'Opus 4', description: 'Most capable' },
+  { id: 'claude-opus-4-5-20251101', name: 'Opus 4.5', description: 'Latest & greatest' },
+]
+
+export const DEFAULT_CLAUDE_MODEL: ClaudeModel = 'claude-sonnet-4-20250514'
+
 export interface Settings {
   key: string // 'main' - single row key
   claudeApiKey?: string // stored locally
+  claudeModel?: ClaudeModel // selected AI model
   autoApplyAiChanges: boolean // default: false
   lastUsedCurrency: string // ISO 4217
   defaultDisplayCurrency: string // ISO 4217 - for dashboard balance display

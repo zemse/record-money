@@ -87,9 +87,8 @@ Working app where user can add expenses with splits, manage users and groups.
   - [x] Search by title
 - [x] Settle up (phase 2)
   - [x] Settle up button creates settlement record
-- [x] Category management (if time permits)
-  - [x] Predefined categories
-  - [x] Custom categories
+- [x] Category management
+  - [x] Predefined categories (code-defined only, no custom categories)
   - [x] Category icons (emoji)
 
 ### Deliverable
@@ -200,6 +199,7 @@ Deployed PWA that works offline and is installable.
   - [x] Storage in IndexedDB
   - [x] Key validation (test API call)
   - [x] Settings page for key management
+  - [x] Model selection (Haiku 3.5, Sonnet 4, Opus 4, Opus 4.5)
 - [x] Chat UI
   - [x] Floating action button
   - [x] Expandable chat panel
@@ -288,10 +288,21 @@ User can scan receipts and import bank statements.
   - [ ] Display converted values
   - [ ] Rates timestamp display
   - [ ] Refresh rates button
-- [ ] Reports/Graphs
-  - [ ] Spending by category (pie chart)
+- [x] Reports/Graphs
+  - [x] Spending by category (pie chart with period selector)
   - [ ] Spending over time (line chart)
   - [ ] Currency-converted totals
+- [x] Personal expenses
+  - [x] Split toggle in expense form (default OFF for personal expenses)
+  - [x] Hide paidBy/paidFor/splitType when personal
+  - [x] Auto-fill current user for personal expenses
+- [x] Feedback
+  - [x] GitHub issues link in Settings page
+- [ ] Onboarding & Multi-Identifier
+  - [ ] First-launch setup flow (optional, skippable)
+  - [ ] User enters their name and identifier
+  - [ ] Support multiple identifier types (email, crypto wallet, phone)
+  - [ ] Identifier format: `email:name@site.com`, `crypto:coolname.eth`, `phone:+91...`
 - [ ] UI polish
   - [ ] Consistent styling
   - [ ] Loading states

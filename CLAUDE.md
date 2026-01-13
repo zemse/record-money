@@ -7,3 +7,4 @@
 - after one or few relevant features are implemented do a thorough review, fmt code and commit.
 - after milestone, pause and wait until asked to advance to next milestone.
 - implement test cases whereever possible.
+- whatever changes are done, spec needs to be updated or atleast a note to be added in spec

@@ -18,8 +18,3 @@ export function getCategoryIcon(categoryName: string, categories: Category[]): s
   const category = categories.find((c) => c.name.toLowerCase() === categoryName.toLowerCase())
   return category?.icon || '💰'
 }
-
-// Generate a unique ID for a custom category
-export function generateCategoryId(name: string): string {
-  return `custom-${name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`
-}

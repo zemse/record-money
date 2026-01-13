@@ -227,6 +227,7 @@ export function RecordsPage() {
             initialData={editingRecord || defaultValues}
             users={users || []}
             groups={groups || []}
+            currentUserEmail={settings?.currentUserEmail}
             onSubmit={(data) => {
               if (editingRecord) {
                 handleUpdate(editingRecord.uuid, data)

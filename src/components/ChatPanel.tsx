@@ -10,6 +10,7 @@ import {
 } from '../utils/claudeClient'
 import { calculateUserBalances } from '../utils/balanceCalculator'
 import type { ExpenseRecord } from '../types'
+import { DEFAULT_CLAUDE_MODEL } from '../types'
 
 interface ChatMessage extends Message {
   id: string
@@ -95,7 +96,12 @@ export function ChatPanel() {
     }))
     conversationHistory.push({ role: 'user', content: input.trim() })
 
-    const response = await sendMessage(settings!.claudeApiKey!, conversationHistory, context)
+    const response = await sendMessage(
+      settings!.claudeApiKey!,
+      conversationHistory,
+      context,
+      settings?.claudeModel || DEFAULT_CLAUDE_MODEL
+    )
 
     if (response.success) {
       const action = parseExpenseAction(response.content)
