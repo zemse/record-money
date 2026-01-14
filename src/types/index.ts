@@ -79,6 +79,7 @@ export interface Settings {
   currentUserEmail?: string // email of the current user ("me")
   theme: Theme // default: 'system'
   defaultAccountId?: string // default account for new expenses
+  onboardingComplete?: boolean // whether user has completed onboarding
 }
 
 // Exchange rates storage

@@ -11,6 +11,7 @@ import {
 } from '../utils/balanceCalculator'
 import { getExchangeRates, convertAmount, getRatesAge } from '../utils/currencyConverter'
 import { SpendingChart } from '../components/SpendingChart'
+import { SpendingTrendChart } from '../components/SpendingTrendChart'
 import { PeriodSelector } from '../components/PeriodSelector'
 
 export function DashboardPage() {
@@ -298,18 +299,31 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {/* Spending by Category Chart */}
+      {/* Charts Section */}
       {categories && categories.length > 0 && chartRecords.length > 0 && (
-        <div className="rounded-2xl border border-border-default bg-surface p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-content">Spending by Category</h2>
-            <PeriodSelector value={chartPeriod} onChange={setChartPeriod} />
+        <div className="space-y-4">
+          {/* Spending by Category Chart */}
+          <div className="rounded-2xl border border-border-default bg-surface p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-content">Spending by Category</h2>
+              <PeriodSelector value={chartPeriod} onChange={setChartPeriod} />
+            </div>
+            <SpendingChart
+              records={chartRecords}
+              categories={categories}
+              displayCurrency={displayCurrency}
+            />
           </div>
-          <SpendingChart
-            records={chartRecords}
-            categories={categories}
-            displayCurrency={displayCurrency}
-          />
+
+          {/* Spending Trend Chart */}
+          <div className="rounded-2xl border border-border-default bg-surface p-6">
+            <h2 className="mb-4 text-lg font-semibold text-content">Spending Over Time</h2>
+            <SpendingTrendChart
+              records={chartRecords}
+              displayCurrency={displayCurrency}
+              period={chartPeriod === 'all' ? 'year' : (chartPeriod as 'week' | 'month' | 'year')}
+            />
+          </div>
         </div>
       )}
 

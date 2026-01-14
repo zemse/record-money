@@ -5,6 +5,7 @@ import { ChatPanel } from './ChatPanel'
 const navItems = [
   { to: '/', label: 'Dashboard', icon: '📊', end: true },
   { to: '/records', label: 'Records', icon: '📝', end: false },
+  { to: '/scan', label: 'Scan', icon: '📷', end: false },
   { to: '/groups', label: 'Groups', icon: '👥', end: false },
   { to: '/users', label: 'Users', icon: '👤', end: false },
   { to: '/settings', label: 'Settings', icon: '⚙️', end: false },

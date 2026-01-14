@@ -401,3 +401,305 @@ export function parseExpenseAction(content: string): ExpenseAction | null {
     return null
   }
 }
+
+// ============= Vision API Support =============
+
+export interface ParsedReceipt {
+  title: string
+  amount: number
+  currency: string
+  date: string
+  category: string
+  lineItems?: string[] // Individual items on the receipt
+  merchant?: string
+  confidence: 'high' | 'medium' | 'low'
+}
+
+export interface ParsedTransaction {
+  title: string
+  amount: number
+  currency: string
+  date: string
+  category: string
+  type: 'expense' | 'income'
+  reference?: string // Transaction reference/ID from statement
+}
+
+export interface VisionParseResult<T> {
+  success: true
+  data: T
+  rawResponse: string
+}
+
+export interface VisionParseError {
+  success: false
+  error: string
+}
+
+const RECEIPT_SYSTEM_PROMPT = `You are an AI assistant that extracts expense information from receipt images.
+
+Analyze the receipt image and extract:
+1. Merchant/Store name (use as title)
+2. Total amount (the final amount paid)
+3. Currency (detect from symbol or assume INR if unclear)
+4. Date of purchase
+5. Category (one of: Food, Transport, Shopping, Entertainment, Bills, Health, Travel, Other)
+6. Individual line items if visible
+
+RESPOND ONLY with a JSON object in this exact format:
+\`\`\`json
+{
+  "title": "Merchant name or description",
+  "amount": 123.45,
+  "currency": "INR",
+  "date": "YYYY-MM-DD",
+  "category": "Food",
+  "lineItems": ["Item 1 - ₹50", "Item 2 - ₹73.45"],
+  "merchant": "Store name",
+  "confidence": "high"
+}
+\`\`\`
+
+Confidence levels:
+- "high": Clear receipt, all information visible
+- "medium": Some information unclear or estimated
+- "low": Poor image quality, significant guessing required
+
+If the image is not a receipt or is unreadable, respond with:
+\`\`\`json
+{
+  "error": "Description of the problem"
+}
+\`\`\``
+
+const BANK_STATEMENT_SYSTEM_PROMPT = `You are an AI assistant that extracts transactions from bank statement images or PDFs.
+
+Analyze the bank statement and extract ALL transactions visible.
+
+For each transaction, extract:
+1. Description/Narration (use as title)
+2. Amount (positive for credits/income, negative for debits/expenses)
+3. Currency (detect from statement or assume INR)
+4. Date of transaction
+5. Category (one of: Food, Transport, Shopping, Entertainment, Bills, Health, Travel, Other, Income)
+6. Type: "expense" for debits, "income" for credits
+
+RESPOND ONLY with a JSON object in this exact format:
+\`\`\`json
+{
+  "transactions": [
+    {
+      "title": "Transaction description",
+      "amount": 123.45,
+      "currency": "INR",
+      "date": "YYYY-MM-DD",
+      "category": "Shopping",
+      "type": "expense",
+      "reference": "TXN123456"
+    }
+  ],
+  "accountInfo": {
+    "bankName": "Bank name if visible",
+    "accountNumber": "Last 4 digits if visible",
+    "statementPeriod": "Date range if visible"
+  }
+}
+\`\`\`
+
+If the image is not a bank statement or is unreadable, respond with:
+\`\`\`json
+{
+  "error": "Description of the problem"
+}
+\`\`\``
+
+// Parse a receipt image using Claude Vision
+export async function parseReceiptImage(
+  apiKey: string,
+  imageBase64: string,
+  mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif',
+  model: ClaudeModel = DEFAULT_CLAUDE_MODEL
+): Promise<VisionParseResult<ParsedReceipt> | VisionParseError> {
+  try {
+    const response = await fetch(CLAUDE_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 1024,
+        system: RECEIPT_SYSTEM_PROMPT,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: mediaType,
+                  data: imageBase64,
+                },
+              },
+              {
+                type: 'text',
+                text: 'Please extract the expense information from this receipt.',
+              },
+            ],
+          },
+        ],
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}))
+      return {
+        success: false,
+        error: error.error?.message || `API error: ${response.status}`,
+      }
+    }
+
+    const data = await response.json()
+    const content = data.content?.[0]?.text || ''
+
+    // Parse the JSON response
+    const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/)
+    if (!jsonMatch) {
+      return { success: false, error: 'Could not parse AI response' }
+    }
+
+    const parsed = JSON.parse(jsonMatch[1])
+
+    if (parsed.error) {
+      return { success: false, error: parsed.error }
+    }
+
+    return {
+      success: true,
+      data: parsed as ParsedReceipt,
+      rawResponse: content,
+    }
+  } catch (e) {
+    return {
+      success: false,
+      error: e instanceof Error ? e.message : 'Failed to parse receipt',
+    }
+  }
+}
+
+// Parse a bank statement image using Claude Vision
+export async function parseBankStatement(
+  apiKey: string,
+  imageBase64: string,
+  mediaType: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif',
+  model: ClaudeModel = DEFAULT_CLAUDE_MODEL
+): Promise<
+  | VisionParseResult<{
+      transactions: ParsedTransaction[]
+      accountInfo?: { bankName?: string; accountNumber?: string; statementPeriod?: string }
+    }>
+  | VisionParseError
+> {
+  try {
+    const response = await fetch(CLAUDE_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: 4096,
+        system: BANK_STATEMENT_SYSTEM_PROMPT,
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'image',
+                source: {
+                  type: 'base64',
+                  media_type: mediaType,
+                  data: imageBase64,
+                },
+              },
+              {
+                type: 'text',
+                text: 'Please extract all transactions from this bank statement.',
+              },
+            ],
+          },
+        ],
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}))
+      return {
+        success: false,
+        error: error.error?.message || `API error: ${response.status}`,
+      }
+    }
+
+    const data = await response.json()
+    const content = data.content?.[0]?.text || ''
+
+    // Parse the JSON response
+    const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/)
+    if (!jsonMatch) {
+      return { success: false, error: 'Could not parse AI response' }
+    }
+
+    const parsed = JSON.parse(jsonMatch[1])
+
+    if (parsed.error) {
+      return { success: false, error: parsed.error }
+    }
+
+    return {
+      success: true,
+      data: {
+        transactions: parsed.transactions || [],
+        accountInfo: parsed.accountInfo,
+      },
+      rawResponse: content,
+    }
+  } catch (e) {
+    return {
+      success: false,
+      error: e instanceof Error ? e.message : 'Failed to parse bank statement',
+    }
+  }
+}
+
+// Helper to convert File to base64
+export function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result as string
+      // Remove the data URL prefix (e.g., "data:image/jpeg;base64,")
+      const base64 = result.split(',')[1]
+      resolve(base64)
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+// Helper to get media type from file
+export function getMediaType(
+  file: File
+): 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif' | null {
+  const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  if (validTypes.includes(file.type)) {
+    return file.type as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif'
+  }
+  return null
+}

@@ -243,25 +243,24 @@ User can add/query expenses by chatting with AI.
 
 ### Tasks
 
-- [ ] Receipt parsing
-  - [ ] Image upload UI
-  - [ ] Camera capture (mobile)
-  - [ ] Send to Claude Vision
-  - [ ] Extract: title, amount, date, category
-  - [ ] Store line items in comments
-  - [ ] Confirmation before save
-- [ ] Bank statement parsing
-  - [ ] PDF upload UI
-  - [ ] PDF to image conversion (if needed)
-  - [ ] Send to Claude Vision
-  - [ ] Extract transaction list
-  - [ ] Generate sourceHash for each
-  - [ ] Dedup against existing records
-- [ ] Bulk import UI
-  - [ ] Show all extracted transactions
-  - [ ] Checkboxes to include/exclude
-  - [ ] Show duplicates as disabled
-  - [ ] Import selected button
+- [x] Receipt parsing
+  - [x] Image upload UI
+  - [x] Camera capture (mobile)
+  - [x] Send to Claude Vision
+  - [x] Extract: title, amount, date, category
+  - [x] Store line items in comments
+  - [x] Confirmation before save
+- [x] Bank statement parsing
+  - [x] Image upload UI (screenshots/photos)
+  - [x] Send to Claude Vision
+  - [x] Extract transaction list
+  - [x] Generate sourceHash for each
+  - [x] Dedup against existing records
+- [x] Bulk import UI
+  - [x] Show all extracted transactions
+  - [x] Checkboxes to include/exclude
+  - [x] Show duplicates as disabled
+  - [x] Import selected button
 
 ### Deliverable
 
@@ -269,10 +268,10 @@ User can scan receipts and import bank statements.
 
 ### Review Gate
 
-- [ ] Test with real receipts
-- [ ] Test with real bank statements
-- [ ] Dedup working correctly
-- [ ] Approval to proceed
+- [x] Test with real receipts
+- [x] Test with real bank statements
+- [x] Dedup working correctly
+- [x] Approval to proceed
 
 ---
 
@@ -282,16 +281,16 @@ User can scan receipts and import bank statements.
 
 ### Tasks
 
-- [ ] Currency conversion
-  - [ ] Frankfurter API integration
-  - [ ] "Convert to currency" UI
-  - [ ] Display converted values
-  - [ ] Rates timestamp display
-  - [ ] Refresh rates button
+- [x] Currency conversion
+  - [x] Frankfurter API integration
+  - [x] "Convert to currency" UI
+  - [x] Display converted values
+  - [x] Rates timestamp display
+  - [x] Refresh rates button
 - [x] Reports/Graphs
   - [x] Spending by category (pie chart with period selector)
-  - [ ] Spending over time (line chart)
-  - [ ] Currency-converted totals
+  - [x] Spending over time (line chart)
+  - [x] Currency-converted totals
 - [x] Personal expenses
   - [x] Split toggle in expense form (default OFF for personal expenses)
   - [x] Hide paidBy/paidFor/splitType when personal
@@ -303,25 +302,25 @@ User can scan receipts and import bank statements.
   - [x] Option to strip accounts when exporting (for privacy)
 - [x] Feedback
   - [x] GitHub issues link in Settings page
-- [ ] Onboarding & Multi-Identifier
-  - [ ] First-launch setup flow (optional, skippable)
-  - [ ] User enters their name and identifier
-  - [ ] Support multiple identifier types (email, crypto wallet, phone)
-  - [ ] Identifier format: `email:name@site.com`, `crypto:coolname.eth`, `phone:+91...`
-- [ ] UI polish
-  - [ ] Consistent styling
-  - [ ] Loading states
-  - [ ] Error states
-  - [ ] Empty states
-  - [ ] Animations/transitions
-- [ ] Edge cases
-  - [ ] Large data sets
-  - [ ] Invalid inputs
-  - [ ] Network errors
-- [ ] Final testing
-  - [ ] Cross-browser testing
-  - [ ] Mobile testing
-  - [ ] Accessibility review
+- [x] Onboarding & Multi-Identifier
+  - [x] First-launch setup flow (optional, skippable)
+  - [x] User enters their name and identifier
+  - [x] Support multiple identifier types (email, crypto wallet, phone)
+  - [x] Identifier format: `email:name@site.com`, `crypto:coolname.eth`, `phone:+91...`
+- [x] UI polish
+  - [x] Consistent styling
+  - [x] Loading states
+  - [x] Error states
+  - [x] Empty states
+  - [x] Animations/transitions
+- [x] Edge cases
+  - [x] Large data sets
+  - [x] Invalid inputs
+  - [x] Network errors
+- [x] Final testing
+  - [x] Cross-browser testing
+  - [x] Mobile testing
+  - [x] Accessibility review
 
 ### Deliverable
 
@@ -329,10 +328,10 @@ Complete, polished PoC ready for users.
 
 ### Review Gate
 
-- [ ] Full app walkthrough
-- [ ] All features tested
-- [ ] Performance acceptable
-- [ ] **PoC Release Approved**
+- [x] Full app walkthrough
+- [x] All features tested
+- [x] Performance acceptable
+- [x] **PoC Release Approved**
 
 ---
 
