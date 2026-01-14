@@ -3,9 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
 import { db, updateSettings, generateUUID, now } from '../db'
 import { useTheme } from '../hooks/useTheme'
-import type { Theme, ExpenseRecord, Account } from '../types'
+import type { Theme, Account } from '../types'
 import { CLAUDE_MODELS, DEFAULT_CLAUDE_MODEL } from '../types'
-import { findPotentialDuplicates, type PotentialDuplicate } from '../utils/deduplication'
+import {
+  findPotentialDuplicates,
+  groupDuplicates,
+  type DuplicateGroup,
+} from '../utils/deduplication'
 import { validateApiKey } from '../utils/claudeClient'
 import { EmojiPicker } from '../components/EmojiPicker'
 
@@ -21,6 +25,7 @@ export function SettingsPage() {
   const navigate = useNavigate()
   const settings = useLiveQuery(() => db.settings.get('main'))
   const users = useLiveQuery(() => db.users.toArray())
+  const groups = useLiveQuery(() => db.groups.toArray())
   const accounts = useLiveQuery(() => db.accounts.toArray())
   const records = useLiveQuery(() => db.records.toArray())
   const { theme, setTheme } = useTheme()
@@ -43,7 +48,7 @@ export function SettingsPage() {
 
   // Duplicate finder state
   const [showDuplicateFinder, setShowDuplicateFinder] = useState(false)
-  const [duplicates, setDuplicates] = useState<PotentialDuplicate[]>([])
+  const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([])
   const [scanningDuplicates, setScanningDuplicates] = useState(false)
 
   const currentUser = users?.find((u) => u.email === settings?.currentUserEmail)
@@ -182,28 +187,56 @@ export function SettingsPage() {
     // Use setTimeout to allow UI to update before heavy computation
     setTimeout(() => {
       const found = findPotentialDuplicates(records, { dateBuffer: 1, minSimilarity: 0.7 })
-      setDuplicates(found)
+      const grouped = groupDuplicates(found)
+      setDuplicateGroups(grouped)
       setScanningDuplicates(false)
     }, 100)
   }
 
-  const handleMergeDuplicates = async (record1: ExpenseRecord, record2: ExpenseRecord) => {
-    if (!window.confirm('Keep the first record and delete the second?')) return
+  // Keep one record, delete all others in the group
+  const handleKeepRecord = async (groupIndex: number, keepUuid: string) => {
+    const group = duplicateGroups[groupIndex]
+    if (!group) return
 
-    await db.records.delete(record2.uuid)
-    setDuplicates(
-      duplicates.filter(
-        (d) => !(d.record1.uuid === record1.uuid && d.record2.uuid === record2.uuid)
+    const toDelete = group.records.filter((r) => r.uuid !== keepUuid)
+    if (
+      !window.confirm(
+        `Keep this record and delete ${toDelete.length} other${toDelete.length > 1 ? 's' : ''}?`
       )
+    )
+      return
+
+    for (const record of toDelete) {
+      await db.records.delete(record.uuid)
+    }
+
+    // Remove this group from the list
+    setDuplicateGroups(duplicateGroups.filter((_, i) => i !== groupIndex))
+  }
+
+  // Delete a single record from a group
+  const handleDeleteFromGroup = async (groupIndex: number, deleteUuid: string) => {
+    if (!window.confirm('Delete this record?')) return
+
+    await db.records.delete(deleteUuid)
+
+    // Update the group - remove the deleted record
+    setDuplicateGroups(
+      duplicateGroups
+        .map((group, i) => {
+          if (i !== groupIndex) return group
+          return {
+            ...group,
+            records: group.records.filter((r) => r.uuid !== deleteUuid),
+          }
+        })
+        .filter((group) => group.records.length >= 2) // Remove groups with less than 2 records
     )
   }
 
-  const handleIgnoreDuplicate = (record1: ExpenseRecord, record2: ExpenseRecord) => {
-    setDuplicates(
-      duplicates.filter(
-        (d) => !(d.record1.uuid === record1.uuid && d.record2.uuid === record2.uuid)
-      )
-    )
+  // Dismiss/ignore a group
+  const handleDismissGroup = (groupIndex: number) => {
+    setDuplicateGroups(duplicateGroups.filter((_, i) => i !== groupIndex))
   }
 
   return (
@@ -416,6 +449,61 @@ export function SettingsPage() {
           )}
         </div>
 
+        {/* AI Memory */}
+        {settings?.claudeApiKey && (
+          <div className="rounded-2xl border border-border-default bg-surface p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-medium text-content">AI Memory</h2>
+                <p className="mt-1 text-sm text-content-secondary">
+                  Store notes about your preferences for better AI responses
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  updateSettings({ enableAiMemory: !(settings?.enableAiMemory ?? true) })
+                }
+                className={`relative h-6 w-11 rounded-full transition-colors ${
+                  settings?.enableAiMemory ?? true ? 'bg-primary' : 'bg-content-tertiary'
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                    settings?.enableAiMemory ?? true ? 'translate-x-5' : ''
+                  }`}
+                />
+              </button>
+            </div>
+
+            {(settings?.enableAiMemory ?? true) && (
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-content">
+                  User Notes
+                </label>
+                <p className="mt-1 text-xs text-content-tertiary">
+                  Brief notes about your preferences, habits, or context the AI should remember
+                </p>
+                <textarea
+                  value={settings?.aiUserSummary || ''}
+                  onChange={(e) => updateSettings({ aiUserSummary: e.target.value })}
+                  placeholder="e.g., I usually pay with Cash for small purchases. My wife is Priya. I track expenses in INR."
+                  className="mt-2 block w-full rounded-xl border border-border-default bg-surface px-3 py-2.5 text-sm text-content transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  rows={3}
+                />
+                {settings?.aiUserSummary && (
+                  <button
+                    onClick={() => updateSettings({ aiUserSummary: undefined })}
+                    className="mt-2 text-xs text-red-500 hover:text-red-600"
+                  >
+                    Clear notes
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Accounts */}
         <div className="rounded-2xl border border-border-default bg-surface p-5">
           <div className="flex items-center justify-between">
@@ -587,7 +675,7 @@ export function SettingsPage() {
               <button
                 onClick={() => {
                   setShowDuplicateFinder(false)
-                  setDuplicates([])
+                  setDuplicateGroups([])
                 }}
                 className="text-sm text-content-secondary hover:text-content"
               >
@@ -600,75 +688,157 @@ export function SettingsPage() {
                 <div className="mx-auto h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                 <p className="mt-2 text-sm text-content-secondary">Scanning records...</p>
               </div>
-            ) : duplicates.length === 0 ? (
+            ) : duplicateGroups.length === 0 ? (
               <div className="mt-4 rounded-xl bg-green-50 px-4 py-3 text-center dark:bg-green-500/10">
                 <p className="text-sm text-green-600 dark:text-green-400">
                   No potential duplicates found!
                 </p>
               </div>
             ) : (
-              <div className="mt-4 space-y-3">
+              <div className="mt-4 space-y-4">
                 <p className="text-sm text-content-secondary">
-                  Found {duplicates.length} potential duplicate{duplicates.length !== 1 && 's'}
+                  Found {duplicateGroups.length} group{duplicateGroups.length !== 1 && 's'} of
+                  potential duplicates
                 </p>
 
-                {duplicates.map((dup, index) => (
-                  <div
-                    key={`${dup.record1.uuid}-${dup.record2.uuid}`}
-                    className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10"
-                  >
-                    <div className="mb-3 flex items-center justify-between">
-                      <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
-                        Pair {index + 1} • {Math.round(dup.similarity * 100)}% similar
-                      </span>
-                      <span className="text-xs text-amber-600/70 dark:text-amber-400/70">
-                        {dup.reasons.join(' • ')}
-                      </span>
-                    </div>
+                {duplicateGroups.map((group, groupIndex) => {
+                  // Helper to format accounts
+                  const formatAccounts = (
+                    recordAccounts?: { accountId: string; amount: number }[]
+                  ) => {
+                    if (!recordAccounts || recordAccounts.length === 0) return '(none)'
+                    return recordAccounts
+                      .map((ap) => {
+                        const acc = accounts?.find((a) => a.id === ap.accountId)
+                        return acc
+                          ? `${acc.icon} ${acc.name}: ${ap.amount}`
+                          : `${ap.accountId}: ${ap.amount}`
+                      })
+                      .join(', ')
+                  }
 
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      <div className="rounded-lg bg-white p-3 dark:bg-surface">
-                        <p className="font-medium text-content">
-                          {dup.record1.icon} {dup.record1.title}
-                        </p>
-                        <p className="text-sm text-content-secondary">
-                          {dup.record1.currency} {dup.record1.amount.toLocaleString()} •{' '}
-                          {dup.record1.date}
-                        </p>
+                  return (
+                    <div
+                      key={group.records.map((r) => r.uuid).join('-')}
+                      className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10"
+                    >
+                      <div className="mb-3 flex items-center justify-between">
+                        <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                          Group {groupIndex + 1} • {group.records.length} records •{' '}
+                          {Math.round(group.avgSimilarity * 100)}% similar
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-amber-600/70 dark:text-amber-400/70">
+                            {group.reasons.join(' • ')}
+                          </span>
+                          <button
+                            onClick={() => handleDismissGroup(groupIndex)}
+                            className="rounded px-2 py-0.5 text-xs text-amber-600 hover:bg-amber-100 dark:text-amber-400 dark:hover:bg-amber-500/20"
+                            title="Dismiss group"
+                          >
+                            Dismiss
+                          </button>
+                        </div>
                       </div>
-                      <div className="rounded-lg bg-white p-3 dark:bg-surface">
-                        <p className="font-medium text-content">
-                          {dup.record2.icon} {dup.record2.title}
-                        </p>
-                        <p className="text-sm text-content-secondary">
-                          {dup.record2.currency} {dup.record2.amount.toLocaleString()} •{' '}
-                          {dup.record2.date}
-                        </p>
-                      </div>
-                    </div>
 
-                    <div className="mt-3 flex gap-2">
-                      <button
-                        onClick={() => handleMergeDuplicates(dup.record1, dup.record2)}
-                        className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
-                      >
-                        Keep First
-                      </button>
-                      <button
-                        onClick={() => handleMergeDuplicates(dup.record2, dup.record1)}
-                        className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
-                      >
-                        Keep Second
-                      </button>
-                      <button
-                        onClick={() => handleIgnoreDuplicate(dup.record1, dup.record2)}
-                        className="rounded-lg bg-surface-tertiary px-3 py-1.5 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-hover"
-                      >
-                        Keep Both
-                      </button>
+                      <div className="space-y-2">
+                        {group.records.map((record, recordIndex) => (
+                          <div
+                            key={record.uuid}
+                            className="rounded-lg bg-white p-3 dark:bg-surface"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-content">
+                                  {record.icon} {record.title}
+                                </p>
+                                <p className="text-sm text-content-secondary">
+                                  {record.currency} {record.amount.toLocaleString()} •{' '}
+                                  {record.date} {record.time}
+                                </p>
+                                {record.description && (
+                                  <p className="mt-1 truncate text-xs text-content-tertiary">
+                                    {record.description}
+                                  </p>
+                                )}
+                                {record.comments && (
+                                  <p className="mt-0.5 truncate text-xs text-content-tertiary italic">
+                                    {record.comments}
+                                  </p>
+                                )}
+                                <div className="mt-1 flex flex-wrap gap-2 text-xs text-content-secondary">
+                                  <span>
+                                    By:{' '}
+                                    {record.paidBy
+                                      .map(
+                                        (p) =>
+                                          users?.find((u) => u.email === p.email)?.alias || p.email
+                                      )
+                                      .join(', ')}
+                                  </span>
+                                  <span>•</span>
+                                  <span>
+                                    For:{' '}
+                                    {record.paidFor
+                                      .map(
+                                        (p) =>
+                                          users?.find((u) => u.email === p.email)?.alias || p.email
+                                      )
+                                      .join(', ')}
+                                  </span>
+                                  {record.groupId && (
+                                    <>
+                                      <span>•</span>
+                                      <span>
+                                        Group:{' '}
+                                        {groups?.find((g) => g.uuid === record.groupId)?.name ||
+                                          'Unknown'}
+                                      </span>
+                                    </>
+                                  )}
+                                  {record.accounts && record.accounts.length > 0 && (
+                                    <>
+                                      <span>•</span>
+                                      <span>Accounts: {formatAccounts(record.accounts)}</span>
+                                    </>
+                                  )}
+                                </div>
+                                <p className="mt-1 text-xs text-content-tertiary">
+                                  Created: {new Date(record.createdAt).toLocaleString()}
+                                </p>
+                              </div>
+                              <div className="flex shrink-0 gap-1">
+                                <button
+                                  onClick={() => handleKeepRecord(groupIndex, record.uuid)}
+                                  className="rounded-lg bg-primary px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-primary-hover"
+                                  title="Keep this record, delete others"
+                                >
+                                  Keep
+                                </button>
+                                {group.records.length > 2 && (
+                                  <button
+                                    onClick={() =>
+                                      handleDeleteFromGroup(groupIndex, record.uuid)
+                                    }
+                                    className="rounded-lg bg-red-100 px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-200 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30"
+                                    title="Delete this record"
+                                  >
+                                    Delete
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                            {recordIndex === 0 && group.records.length === 2 && (
+                              <p className="mt-2 text-center text-xs text-amber-600 dark:text-amber-400">
+                                — vs —
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </div>

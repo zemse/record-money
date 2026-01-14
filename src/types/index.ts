@@ -5,6 +5,12 @@ export interface Participant {
 
 export type ShareType = 'equal' | 'percentage' | 'exact' | 'shares'
 
+// Account payment for tracking split payments across accounts
+export interface AccountPayment {
+  accountId: string
+  amount: number
+}
+
 export interface ExpenseRecord {
   uuid: string // randomly generated, survives edits
   title: string
@@ -19,7 +25,7 @@ export interface ExpenseRecord {
   paidFor: Participant[]
   shareType: ShareType
   groupId: string | null
-  account?: string // optional: which account was used (Cash, Bank, Wallet, etc.)
+  accounts?: AccountPayment[] // optional: which accounts were used with amounts (supports split payments)
   comments: string // verbose details, AI extraction notes
   sourceHash?: string // for bank statement dedup: `${filename}:${hash}`
   createdAt: number // timestamp ms
@@ -66,6 +72,8 @@ export interface Settings {
   claudeApiKey?: string // stored locally
   claudeModel?: ClaudeModel // selected AI model
   autoApplyAiChanges: boolean // default: false
+  enableAiMemory: boolean // default: true - store AI interaction summary
+  aiUserSummary?: string // brief summary of user preferences and interaction patterns
   lastUsedCurrency: string // ISO 4217
   defaultDisplayCurrency: string // ISO 4217 - for dashboard balance display
   currentUserEmail?: string // email of the current user ("me")

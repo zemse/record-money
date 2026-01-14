@@ -87,6 +87,7 @@ export async function updateSettings(updates: Partial<Omit<Settings, 'key'>>): P
     await db.settings.add({
       key: 'main',
       autoApplyAiChanges: false,
+      enableAiMemory: true,
       lastUsedCurrency: 'INR',
       defaultDisplayCurrency: 'INR',
       theme: 'system',
@@ -102,13 +103,23 @@ export async function initializeSettings(): Promise<void> {
     await db.settings.add({
       key: 'main',
       autoApplyAiChanges: false,
+      enableAiMemory: true,
       lastUsedCurrency: 'INR',
       defaultDisplayCurrency: 'INR',
       theme: 'system',
     })
-  } else if (!settings.defaultDisplayCurrency) {
-    // Migration: add defaultDisplayCurrency if missing
-    await db.settings.update('main', { defaultDisplayCurrency: 'INR' })
+  } else {
+    // Migrations for existing users
+    const migrations: Partial<Settings> = {}
+    if (!settings.defaultDisplayCurrency) {
+      migrations.defaultDisplayCurrency = 'INR'
+    }
+    if (settings.enableAiMemory === undefined) {
+      migrations.enableAiMemory = true
+    }
+    if (Object.keys(migrations).length > 0) {
+      await db.settings.update('main', migrations)
+    }
   }
 }
 

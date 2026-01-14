@@ -7,6 +7,7 @@ import {
   parseExpenseAction,
   type Message,
   type ExpenseAction,
+  type CreateAccountAction,
 } from '../utils/claudeClient'
 import { calculateUserBalances } from '../utils/balanceCalculator'
 import type { ExpenseRecord } from '../types'
@@ -29,6 +30,7 @@ export function ChatPanel() {
   const settings = useLiveQuery(() => db.settings.get('main'))
   const users = useLiveQuery(() => db.users.toArray())
   const records = useLiveQuery(() => db.records.toArray())
+  const accounts = useLiveQuery(() => db.accounts.toArray())
   const isOnline = useOnlineStatus()
 
   const hasApiKey = !!settings?.claudeApiKey
@@ -78,7 +80,10 @@ export function ChatPanel() {
     const context = {
       currentUserEmail,
       currentDate: new Date().toISOString().split('T')[0],
+      userSummary: settings?.enableAiMemory ? settings?.aiUserSummary : undefined,
       users: users?.map((u) => ({ email: u.email, alias: u.alias })) || [],
+      accounts: accounts?.map((a) => ({ id: a.id, name: a.name, icon: a.icon })) || [],
+      defaultAccountId: settings?.defaultAccountId,
       recentExpenses: recentRecords || [],
       balances: userBalances
         ? {
@@ -169,6 +174,7 @@ export function ChatPanel() {
         })),
         shareType: data.splitType,
         groupId: null,
+        accounts: data.accounts && data.accounts.length > 0 ? data.accounts : undefined,
         comments: 'Created via AI assistant',
         createdAt: now(),
         updatedAt: now(),
@@ -258,6 +264,69 @@ export function ChatPanel() {
         id: generateUUID(),
         role: 'assistant',
         content: `Done! I've deleted "${existingRecord.title}".`,
+        timestamp: Date.now(),
+      }
+      setMessages((prev) => [...prev, confirmMessage])
+    } else if (action.action === 'create_account') {
+      const { data } = action as CreateAccountAction
+
+      // Create the new account
+      const newAccountId = generateUUID()
+      await db.accounts.add({
+        id: newAccountId,
+        name: data.name,
+        icon: data.icon || '💳',
+        createdAt: now(),
+      })
+
+      let confirmContent = `Done! I've created a new account "${data.icon || '💳'} ${data.name}".`
+
+      // If there's an expense to create as well
+      if (data.thenCreateExpense) {
+        const expenseData = data.thenCreateExpense
+
+        // Resolve "me" to current user email
+        const resolvePaidBy = expenseData.paidBy.map((p) =>
+          p === 'me' && currentUserEmail ? currentUserEmail : p
+        )
+        const resolvePaidFor = expenseData.paidFor.map((p) =>
+          p === 'me' && currentUserEmail ? currentUserEmail : p
+        )
+
+        const record: ExpenseRecord = {
+          uuid: generateUUID(),
+          title: expenseData.title,
+          description: '',
+          category: expenseData.category,
+          amount: expenseData.amount,
+          currency: expenseData.currency,
+          date: expenseData.date,
+          time: new Date().toTimeString().slice(0, 5),
+          icon: getCategoryIcon(expenseData.category),
+          paidBy: resolvePaidBy.map((email) => ({
+            email,
+            share: expenseData.amount / resolvePaidBy.length,
+          })),
+          paidFor: resolvePaidFor.map((email) => ({
+            email,
+            share: expenseData.amount / resolvePaidFor.length,
+          })),
+          shareType: expenseData.splitType,
+          groupId: null,
+          accounts: [{ accountId: newAccountId, amount: expenseData.amount }],
+          comments: 'Created via AI assistant',
+          createdAt: now(),
+          updatedAt: now(),
+        }
+
+        await db.records.add(record)
+        confirmContent += ` Also added "${expenseData.title}" for ${expenseData.currency} ${expenseData.amount}.`
+      }
+
+      const confirmMessage: ChatMessage = {
+        id: generateUUID(),
+        role: 'assistant',
+        content: confirmContent,
         timestamp: Date.now(),
       }
       setMessages((prev) => [...prev, confirmMessage])
@@ -380,6 +449,20 @@ export function ChatPanel() {
                                 {message.action.data.currency} {message.action.data.amount} •{' '}
                                 {message.action.data.date}
                               </p>
+                              {message.action.data.accounts &&
+                                message.action.data.accounts.length > 0 && (
+                                  <p className="text-xs text-content-tertiary">
+                                    Account:{' '}
+                                    {message.action.data.accounts
+                                      .map((a) => {
+                                        const acc = accounts?.find((ac) => ac.id === a.accountId)
+                                        return acc
+                                          ? `${acc.icon} ${acc.name}`
+                                          : a.accountId
+                                      })
+                                      .join(', ')}
+                                  </p>
+                                )}
                             </div>
                           </div>
                         </div>
@@ -409,6 +492,27 @@ export function ChatPanel() {
                               <p className="font-medium text-red-600 dark:text-red-400">
                                 Delete Expense
                               </p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      {message.action.action === 'create_account' && (
+                        <div className="rounded-xl bg-surface p-3">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">
+                              {(message.action as CreateAccountAction).data.icon || '💳'}
+                            </span>
+                            <div>
+                              <p className="font-medium">
+                                New Account: {(message.action as CreateAccountAction).data.name}
+                              </p>
+                              {(message.action as CreateAccountAction).data.thenCreateExpense && (
+                                <p className="text-sm text-content-secondary">
+                                  + {(message.action as CreateAccountAction).data.thenCreateExpense!.title} -{' '}
+                                  {(message.action as CreateAccountAction).data.thenCreateExpense!.currency}{' '}
+                                  {(message.action as CreateAccountAction).data.thenCreateExpense!.amount}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -443,7 +547,9 @@ export function ChatPanel() {
                           ? 'Added'
                           : message.action.action === 'update_expense'
                             ? 'Updated'
-                            : 'Deleted'}
+                            : message.action.action === 'create_account'
+                              ? 'Created'
+                              : 'Deleted'}
                       </p>
                     </div>
                   ) : message.action && message.actionStatus === 'cancelled' ? (

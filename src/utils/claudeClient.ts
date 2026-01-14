@@ -76,6 +76,7 @@ WHEN CREATING EXPENSES, extract:
 - paidBy: Who paid (default to "me" / current user)
 - paidFor: Who the expense is for (default to same as paidBy for personal expenses)
 - splitType: "equal", "exact", or "percentage"
+- accounts: Optional array of payment accounts with amounts (if user mentions which account they paid from)
 
 RESPONSE FORMAT:
 
@@ -91,11 +92,13 @@ For expense CREATION:
     "date": "YYYY-MM-DD",
     "paidBy": ["email or 'me'"],
     "paidFor": ["email or 'me'"],
-    "splitType": "equal"
+    "splitType": "equal",
+    "accounts": [{"accountId": "account-id", "amount": number}]
   },
   "confirmation": "Human-readable summary of what will be created"
 }
 \`\`\`
+Note: "accounts" is optional. Only include it if the user specifies which account(s) they paid from. Match account names from AVAILABLE ACCOUNTS.
 
 For expense UPDATE (only include fields that are changing):
 \`\`\`json
@@ -124,11 +127,42 @@ For expense DELETE:
 }
 \`\`\`
 
+For CREATING a new payment ACCOUNT:
+\`\`\`json
+{
+  "action": "create_account",
+  "data": {
+    "name": "Account name",
+    "icon": "💳",
+    "thenCreateExpense": {
+      "title": "string",
+      "amount": number,
+      "currency": "string",
+      "category": "string",
+      "date": "YYYY-MM-DD",
+      "paidBy": ["email or 'me'"],
+      "paidFor": ["email or 'me'"],
+      "splitType": "equal"
+    }
+  },
+  "confirmation": "Human-readable summary"
+}
+\`\`\`
+Note: "thenCreateExpense" is optional. Include it when the user wants to create both account and expense in one go.
+
 For queries about expenses, balances, or spending:
 - Use the RECENT EXPENSES data to answer questions about spending history
 - Use the BALANCES data to answer questions about who owes whom
 - Respond naturally with the requested information
 - Format currency amounts nicely (e.g., ₹450 or INR 450)
+
+HANDLING UNKNOWN ACCOUNTS:
+When user mentions an account name that doesn't exist in AVAILABLE ACCOUNTS:
+1. Check if there's a similar account name (e.g., "cash" vs "Cash", "hdfc" vs "HDFC Bank")
+2. If similar accounts exist, ask: "Did you mean [similar account]? Or would you like me to create a new account called '[mentioned name]'?"
+3. If no similar accounts, ask: "I don't see '[mentioned name]' in your accounts. Would you like me to create it?"
+4. Choose an appropriate emoji icon based on the account name (💵 for cash, 🏦 for banks, 📱 for digital wallets like Paytm/GPay, 💳 for cards)
+5. Only create the account after user confirms
 
 For unclear requests, ask clarifying questions.
 
@@ -150,7 +184,10 @@ export async function sendMessage(
   context?: {
     currentUserEmail?: string
     currentDate?: string
+    userSummary?: string // AI memory - brief summary of user preferences
     users?: { email: string; alias: string }[]
+    accounts?: { id: string; name: string; icon: string }[]
+    defaultAccountId?: string
     recentExpenses?: {
       uuid: string
       title: string
@@ -181,8 +218,23 @@ export async function sendMessage(
       if (context.currentDate) {
         systemPrompt += `\n- Today's date: ${context.currentDate}`
       }
+      if (context.userSummary) {
+        systemPrompt += `\n\nUSER NOTES (remembered from previous interactions):\n${context.userSummary}`
+      }
       if (context.users && context.users.length > 0) {
         systemPrompt += `\n- Known users: ${context.users.map((u) => `${u.alias} (${u.email})`).join(', ')}`
+      }
+
+      // Add available accounts
+      if (context.accounts && context.accounts.length > 0) {
+        systemPrompt += '\n\nAVAILABLE ACCOUNTS (for payment tracking):'
+        context.accounts.forEach((a) => {
+          const isDefault = a.id === context.defaultAccountId ? ' [DEFAULT]' : ''
+          systemPrompt += `\n- [id: ${a.id}] ${a.icon} ${a.name}${isDefault}`
+        })
+        if (context.defaultAccountId) {
+          systemPrompt += `\n(When user doesn't specify an account, use the default account)`
+        }
       }
 
       // Add balance data
@@ -274,6 +326,7 @@ export interface CreateExpenseAction {
     paidBy: string[]
     paidFor: string[]
     splitType: 'equal' | 'exact' | 'percentage'
+    accounts?: { accountId: string; amount: number }[]
   }
   confirmation: string
 }
@@ -299,7 +352,30 @@ export interface DeleteExpenseAction {
   confirmation: string
 }
 
-export type ExpenseAction = CreateExpenseAction | UpdateExpenseAction | DeleteExpenseAction
+export interface CreateAccountAction {
+  action: 'create_account'
+  data: {
+    name: string
+    icon: string
+    thenCreateExpense?: {
+      title: string
+      amount: number
+      currency: string
+      category: string
+      date: string
+      paidBy: string[]
+      paidFor: string[]
+      splitType: 'equal' | 'exact' | 'percentage'
+    }
+  }
+  confirmation: string
+}
+
+export type ExpenseAction =
+  | CreateExpenseAction
+  | UpdateExpenseAction
+  | DeleteExpenseAction
+  | CreateAccountAction
 
 export function parseExpenseAction(content: string): ExpenseAction | null {
   // Look for JSON block in response
@@ -316,6 +392,9 @@ export function parseExpenseAction(content: string): ExpenseAction | null {
     }
     if (parsed.action === 'delete_expense' && parsed.data?.uuid) {
       return parsed as DeleteExpenseAction
+    }
+    if (parsed.action === 'create_account' && parsed.data?.name) {
+      return parsed as CreateAccountAction
     }
     return null
   } catch {

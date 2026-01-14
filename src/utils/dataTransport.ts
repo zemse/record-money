@@ -273,7 +273,7 @@ export function getGroupsFromRecords(records: ExpenseRecord[], allGroups: Group[
 // Strip account information from records (for privacy when sharing)
 export function stripAccountsFromRecords(records: ExpenseRecord[]): ExpenseRecord[] {
   return records.map((record) => {
-    const { account, ...rest } = record
+    const { accounts, ...rest } = record
     return rest
   })
 }

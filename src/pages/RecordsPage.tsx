@@ -235,14 +235,16 @@ export function RecordsPage() {
         </div>
         <div className="max-w-xl">
           <RecordForm
+            key={editingRecord?.uuid || 'new'}
             initialData={editingRecord || defaultValues}
             users={users || []}
             groups={groups || []}
             currentUserEmail={settings?.currentUserEmail}
             defaultAccountId={settings?.defaultAccountId}
-            onSubmit={(data) => {
-              if (editingRecord) {
-                handleUpdate(editingRecord.uuid, data)
+            editingRecordId={editingRecord?.uuid}
+            onSubmit={(data, recordId) => {
+              if (recordId) {
+                handleUpdate(recordId, data)
               } else {
                 handleAdd(data)
               }

@@ -48,6 +48,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       await db.settings.add({
         key: 'main',
         autoApplyAiChanges: false,
+        enableAiMemory: true,
         lastUsedCurrency: 'INR',
         defaultDisplayCurrency: 'INR',
         theme: newTheme,

@@ -154,6 +154,13 @@ export interface PotentialDuplicate {
   reasons: string[]
 }
 
+// Grouped duplicates - all records that are similar to each other
+export interface DuplicateGroup {
+  records: ExpenseRecord[]
+  avgSimilarity: number
+  reasons: string[]
+}
+
 export function findPotentialDuplicates(
   records: ExpenseRecord[],
   options: {
@@ -189,6 +196,97 @@ export function findPotentialDuplicates(
 
   // Sort by similarity (highest first)
   return duplicates.sort((a, b) => b.similarity - a.similarity)
+}
+
+// Group duplicates using Union-Find to find connected components
+export function groupDuplicates(duplicates: PotentialDuplicate[]): DuplicateGroup[] {
+  if (duplicates.length === 0) return []
+
+  // Build a map of all unique records
+  const recordMap = new Map<string, ExpenseRecord>()
+  const parent = new Map<string, string>()
+  const similarities = new Map<string, { sum: number; count: number; reasons: Set<string> }>()
+
+  for (const dup of duplicates) {
+    recordMap.set(dup.record1.uuid, dup.record1)
+    recordMap.set(dup.record2.uuid, dup.record2)
+    if (!parent.has(dup.record1.uuid)) parent.set(dup.record1.uuid, dup.record1.uuid)
+    if (!parent.has(dup.record2.uuid)) parent.set(dup.record2.uuid, dup.record2.uuid)
+  }
+
+  // Find with path compression
+  const find = (x: string): string => {
+    if (parent.get(x) !== x) {
+      parent.set(x, find(parent.get(x)!))
+    }
+    return parent.get(x)!
+  }
+
+  // Union
+  const union = (x: string, y: string) => {
+    const px = find(x)
+    const py = find(y)
+    if (px !== py) {
+      parent.set(px, py)
+    }
+  }
+
+  // Union all duplicate pairs
+  for (const dup of duplicates) {
+    union(dup.record1.uuid, dup.record2.uuid)
+
+    // Track similarity info for this pair
+    const key = [dup.record1.uuid, dup.record2.uuid].sort().join(':')
+    if (!similarities.has(key)) {
+      similarities.set(key, { sum: 0, count: 0, reasons: new Set() })
+    }
+    const info = similarities.get(key)!
+    info.sum += dup.similarity
+    info.count++
+    dup.reasons.forEach((r) => info.reasons.add(r))
+  }
+
+  // Group by root parent
+  const groups = new Map<string, ExpenseRecord[]>()
+  for (const [uuid] of recordMap) {
+    const root = find(uuid)
+    if (!groups.has(root)) {
+      groups.set(root, [])
+    }
+    groups.get(root)!.push(recordMap.get(uuid)!)
+  }
+
+  // Convert to DuplicateGroup array
+  const result: DuplicateGroup[] = []
+  for (const [, records] of groups) {
+    if (records.length < 2) continue
+
+    // Calculate average similarity and collect reasons for this group
+    let totalSim = 0
+    let simCount = 0
+    const allReasons = new Set<string>()
+
+    for (let i = 0; i < records.length; i++) {
+      for (let j = i + 1; j < records.length; j++) {
+        const key = [records[i].uuid, records[j].uuid].sort().join(':')
+        const info = similarities.get(key)
+        if (info) {
+          totalSim += info.sum / info.count
+          simCount++
+          info.reasons.forEach((r) => allReasons.add(r))
+        }
+      }
+    }
+
+    result.push({
+      records: records.sort((a, b) => a.createdAt - b.createdAt), // Sort by creation time
+      avgSimilarity: simCount > 0 ? totalSim / simCount : 0,
+      reasons: Array.from(allReasons),
+    })
+  }
+
+  // Sort groups by average similarity (highest first)
+  return result.sort((a, b) => b.avgSimilarity - a.avgSimilarity)
 }
 
 function checkSimilarity(
@@ -252,7 +350,16 @@ function checkSimilarity(
     reasons.push('Same category')
   }
 
-  return { similarity: score, reasons }
+  // Check accounts match
+  const r1Accounts = r1.accounts?.map((a) => `${a.accountId}:${a.amount}`).sort().join(',') || ''
+  const r2Accounts = r2.accounts?.map((a) => `${a.accountId}:${a.amount}`).sort().join(',') || ''
+  if (r1Accounts !== r2Accounts) {
+    // Reduce similarity if accounts differ
+    score -= 0.1
+    reasons.push('Different accounts')
+  }
+
+  return { similarity: Math.max(0, score), reasons }
 }
 
 // Merge two records (used when user chooses to merge)
