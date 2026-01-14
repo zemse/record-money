@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLiveQuery } from 'dexie-react-hooks'
-import { db, updateSettings } from '../db'
+import { db, updateSettings, generateUUID, now } from '../db'
 import { useTheme } from '../hooks/useTheme'
-import type { Theme, ExpenseRecord } from '../types'
+import type { Theme, ExpenseRecord, Account } from '../types'
 import { CLAUDE_MODELS, DEFAULT_CLAUDE_MODEL } from '../types'
 import { findPotentialDuplicates, type PotentialDuplicate } from '../utils/deduplication'
 import { validateApiKey } from '../utils/claudeClient'
+import { EmojiPicker } from '../components/EmojiPicker'
 
 const themeOptions: { value: Theme; label: string; icon: string }[] = [
   { value: 'light', label: 'Light', icon: '☀️' },
@@ -20,7 +21,7 @@ export function SettingsPage() {
   const navigate = useNavigate()
   const settings = useLiveQuery(() => db.settings.get('main'))
   const users = useLiveQuery(() => db.users.toArray())
-  const categories = useLiveQuery(() => db.categories.toArray())
+  const accounts = useLiveQuery(() => db.accounts.toArray())
   const records = useLiveQuery(() => db.records.toArray())
   const { theme, setTheme } = useTheme()
 
@@ -31,6 +32,14 @@ export function SettingsPage() {
     'idle'
   )
   const [apiKeyError, setApiKeyError] = useState('')
+
+  // Account management state
+  const [showAccountForm, setShowAccountForm] = useState(false)
+  const [newAccountName, setNewAccountName] = useState('')
+  const [newAccountIcon, setNewAccountIcon] = useState('💳')
+  const [showAccountEmojiPicker, setShowAccountEmojiPicker] = useState(false)
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null)
+  const [accountError, setAccountError] = useState('')
 
   // Duplicate finder state
   const [showDuplicateFinder, setShowDuplicateFinder] = useState(false)
@@ -75,6 +84,92 @@ export function SettingsPage() {
 
   const handleClearCurrentUser = async () => {
     await updateSettings({ currentUserEmail: undefined })
+  }
+
+  // Account management functions
+  const handleAddAccount = async () => {
+    setAccountError('')
+    if (!newAccountName.trim()) {
+      setAccountError('Account name is required')
+      return
+    }
+
+    // Check for duplicate name
+    const existing = accounts?.find(
+      (a) => a.name.toLowerCase() === newAccountName.trim().toLowerCase()
+    )
+    if (existing) {
+      setAccountError('An account with this name already exists')
+      return
+    }
+
+    const newAccount: Account = {
+      id: generateUUID(),
+      name: newAccountName.trim(),
+      icon: newAccountIcon,
+      createdAt: now(),
+    }
+
+    await db.accounts.add(newAccount)
+    setNewAccountName('')
+    setNewAccountIcon('💳')
+    setShowAccountForm(false)
+  }
+
+  const handleUpdateAccount = async () => {
+    if (!editingAccount) return
+    setAccountError('')
+
+    if (!newAccountName.trim()) {
+      setAccountError('Account name is required')
+      return
+    }
+
+    // Check for duplicate name (excluding current)
+    const existing = accounts?.find(
+      (a) =>
+        a.id !== editingAccount.id && a.name.toLowerCase() === newAccountName.trim().toLowerCase()
+    )
+    if (existing) {
+      setAccountError('An account with this name already exists')
+      return
+    }
+
+    await db.accounts.update(editingAccount.id, {
+      name: newAccountName.trim(),
+      icon: newAccountIcon,
+    })
+
+    setEditingAccount(null)
+    setNewAccountName('')
+    setNewAccountIcon('💳')
+    setShowAccountForm(false)
+  }
+
+  const handleDeleteAccount = async (account: Account) => {
+    if (window.confirm(`Delete account "${account.name}"?`)) {
+      await db.accounts.delete(account.id)
+      // Clear default if this was the default account
+      if (settings?.defaultAccountId === account.id) {
+        await updateSettings({ defaultAccountId: undefined })
+      }
+    }
+  }
+
+  const startEditAccount = (account: Account) => {
+    setEditingAccount(account)
+    setNewAccountName(account.name)
+    setNewAccountIcon(account.icon)
+    setShowAccountForm(true)
+    setAccountError('')
+  }
+
+  const cancelAccountForm = () => {
+    setShowAccountForm(false)
+    setEditingAccount(null)
+    setNewAccountName('')
+    setNewAccountIcon('💳')
+    setAccountError('')
   }
 
   // Duplicate finder functions
@@ -321,27 +416,138 @@ export function SettingsPage() {
           )}
         </div>
 
-        {/* Categories */}
+        {/* Accounts */}
         <div className="rounded-2xl border border-border-default bg-surface p-5">
-          <div>
-            <h2 className="font-medium text-content">Categories</h2>
-            <p className="mt-1 text-sm text-content-secondary">Available expense categories</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-medium text-content">Accounts</h2>
+              <p className="mt-1 text-sm text-content-secondary">
+                Track which account money was spent from
+              </p>
+            </div>
+            {!showAccountForm && (
+              <button
+                onClick={() => setShowAccountForm(true)}
+                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+              >
+                + Add
+              </button>
+            )}
           </div>
 
-          {/* Category List (Read-only) */}
-          <div className="mt-4 space-y-2">
-            {categories
-              ?.filter((c) => c.name !== 'Settlement')
-              .map((category) => (
-                <div
-                  key={category.id}
-                  className="flex items-center gap-2 rounded-lg bg-surface-tertiary px-3 py-2"
-                >
-                  <span className="text-lg">{category.icon}</span>
-                  <span className="text-sm font-medium text-content">{category.name}</span>
+          {/* Add/Edit Account Form */}
+          {showAccountForm && (
+            <div className="mt-4 rounded-xl border border-border-default bg-surface-tertiary p-4">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowAccountEmojiPicker(!showAccountEmojiPicker)}
+                    className="flex h-12 w-12 items-center justify-center rounded-xl bg-surface text-2xl transition-colors hover:bg-surface-hover"
+                  >
+                    {newAccountIcon}
+                  </button>
+                  {showAccountEmojiPicker && (
+                    <div className="absolute left-0 top-full z-10 mt-2">
+                      <EmojiPicker
+                        onSelect={(emoji) => {
+                          setNewAccountIcon(emoji)
+                          setShowAccountEmojiPicker(false)
+                        }}
+                        onClose={() => setShowAccountEmojiPicker(false)}
+                      />
+                    </div>
+                  )}
                 </div>
-              ))}
+                <input
+                  type="text"
+                  value={newAccountName}
+                  onChange={(e) => {
+                    setNewAccountName(e.target.value)
+                    setAccountError('')
+                  }}
+                  placeholder="Account name (e.g., Cash, HDFC Bank)"
+                  className="flex-1 rounded-lg border border-border-default bg-surface px-3 py-2 text-content transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              {accountError && <p className="mt-2 text-sm text-red-500">{accountError}</p>}
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={editingAccount ? handleUpdateAccount : handleAddAccount}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+                >
+                  {editingAccount ? 'Update' : 'Add'}
+                </button>
+                <button
+                  onClick={cancelAccountForm}
+                  className="rounded-lg bg-surface px-4 py-2 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-hover"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Account List */}
+          <div className="mt-4 space-y-2">
+            {accounts?.length === 0 && !showAccountForm && (
+              <p className="text-sm text-content-tertiary">
+                No accounts yet. Add accounts like "Cash", "Bank", or "Wallet" to track where your
+                money is spent from.
+              </p>
+            )}
+            {accounts?.map((acc) => (
+              <div
+                key={acc.id}
+                className="flex items-center justify-between rounded-lg bg-surface-tertiary px-3 py-2"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-lg">{acc.icon}</span>
+                  <span className="text-sm font-medium text-content">{acc.name}</span>
+                  {settings?.defaultAccountId === acc.id && (
+                    <span className="rounded-full bg-primary-light px-2 py-0.5 text-xs font-medium text-primary">
+                      Default
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-1">
+                  {settings?.defaultAccountId !== acc.id && (
+                    <button
+                      onClick={() => updateSettings({ defaultAccountId: acc.id })}
+                      className="rounded-lg px-2 py-1.5 text-xs font-medium text-content-secondary transition-colors hover:bg-surface-hover hover:text-content"
+                      title="Set as default"
+                    >
+                      Set Default
+                    </button>
+                  )}
+                  <button
+                    onClick={() => startEditAccount(acc)}
+                    className="rounded-lg p-1.5 text-content-tertiary transition-colors hover:bg-surface-hover hover:text-content"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    onClick={() => handleDeleteAccount(acc)}
+                    className="rounded-lg p-1.5 text-content-tertiary transition-colors hover:bg-surface-hover hover:text-red-500"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
+
+          {/* Clear default account if set */}
+          {settings?.defaultAccountId && accounts && accounts.length > 0 && (
+            <div className="mt-3 border-t border-border-default pt-3">
+              <button
+                onClick={() => updateSettings({ defaultAccountId: undefined })}
+                className="text-sm text-content-secondary hover:text-content"
+              >
+                Clear default account
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Data */}

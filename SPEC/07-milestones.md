@@ -296,6 +296,11 @@ User can scan receipts and import bank statements.
   - [x] Split toggle in expense form (default OFF for personal expenses)
   - [x] Hide paidBy/paidFor/splitType when personal
   - [x] Auto-fill current user for personal expenses
+- [x] Account tracking
+  - [x] Account type (Cash, Bank, Wallet, etc.) stored per expense
+  - [x] User-defined accounts with icons in Settings
+  - [x] Account selector in expense form
+  - [x] Option to strip accounts when exporting (for privacy)
 - [x] Feedback
   - [x] GitHub issues link in Settings page
 - [ ] Onboarding & Multi-Identifier

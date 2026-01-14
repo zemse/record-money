@@ -19,6 +19,7 @@ export interface ExpenseRecord {
   paidFor: Participant[]
   shareType: ShareType
   groupId: string | null
+  account?: string // optional: which account was used (Cash, Bank, Wallet, etc.)
   comments: string // verbose details, AI extraction notes
   sourceHash?: string // for bank statement dedup: `${filename}:${hash}`
   createdAt: number // timestamp ms
@@ -69,6 +70,7 @@ export interface Settings {
   defaultDisplayCurrency: string // ISO 4217 - for dashboard balance display
   currentUserEmail?: string // email of the current user ("me")
   theme: Theme // default: 'system'
+  defaultAccountId?: string // default account for new expenses
 }
 
 // Exchange rates storage
@@ -85,4 +87,12 @@ export interface Category {
   name: string // display name
   icon: string // emoji icon
   isSystem: boolean // true for predefined categories, false for custom
+}
+
+// Account for tracking money source (user-defined)
+export interface Account {
+  id: string // unique identifier
+  name: string // display name (e.g., "Cash", "HDFC Bank", "Wallet")
+  icon: string // emoji icon
+  createdAt: number // timestamp ms
 }

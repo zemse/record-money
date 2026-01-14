@@ -1,5 +1,5 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { ExpenseRecord, User, Group, Settings, ExchangeRates, Category } from '../types'
+import type { ExpenseRecord, User, Group, Settings, ExchangeRates, Category, Account } from '../types'
 import { DEFAULT_GROUP_UUID } from '../types'
 import { DEFAULT_CATEGORIES } from '../constants/categories'
 
@@ -10,6 +10,7 @@ const db = new Dexie('RecordMoney') as Dexie & {
   settings: EntityTable<Settings, 'key'>
   exchangeRates: EntityTable<ExchangeRates, 'key'>
   categories: EntityTable<Category, 'id'>
+  accounts: EntityTable<Account, 'id'>
 }
 
 db.version(1).stores({
@@ -34,6 +35,16 @@ db.version(3).stores({
   settings: 'key',
   exchangeRates: 'key',
   categories: 'id, name, isSystem',
+})
+
+db.version(4).stores({
+  records: 'uuid, groupId, date, category, sourceHash, account',
+  users: 'email',
+  groups: 'uuid',
+  settings: 'key',
+  exchangeRates: 'key',
+  categories: 'id, name, isSystem',
+  accounts: 'id, name',
 })
 
 export { db }

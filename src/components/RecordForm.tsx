@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
-import type { ExpenseRecord, User, Group, ShareType, Participant, Category } from '../types'
+import type { ExpenseRecord, User, Group, ShareType, Participant, Category, Account } from '../types'
 import { DEFAULT_GROUP_UUID } from '../types'
 import { UserPicker } from './UserPicker'
-import { addUser, db } from '../db'
+import { addUser, db, generateUUID, now } from '../db'
+import { EmojiPicker } from './EmojiPicker'
 
 // Common currencies
 const CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'JPY', 'AUD', 'CAD', 'SGD', 'AED', 'THB']
@@ -13,6 +14,7 @@ interface RecordFormProps {
   users: User[]
   groups: Group[]
   currentUserEmail?: string
+  defaultAccountId?: string
   onSubmit: (data: Omit<ExpenseRecord, 'uuid' | 'createdAt' | 'updatedAt'>) => void
   onCancel: () => void
 }
@@ -39,6 +41,7 @@ export function RecordForm({
   users,
   groups,
   currentUserEmail,
+  defaultAccountId,
   onSubmit,
   onCancel,
 }: RecordFormProps) {
@@ -57,13 +60,23 @@ export function RecordForm({
     initialData.paidFor.map((p) => p.email)
   )
   const [comments, setComments] = useState(initialData.comments)
+  const [account, setAccount] = useState(initialData.account || defaultAccountId || '')
   const [error, setError] = useState('')
 
   // Split mode - defaults to OFF for new records, ON for split expenses being edited
   const [isSplitEnabled, setIsSplitEnabled] = useState(() => isSplitExpense(initialData))
 
-  // Fetch categories from database
+  // Account tracking toggle and inline creation
+  const [trackAccount, setTrackAccount] = useState(!!initialData.account || !!defaultAccountId)
+  const [showAddAccount, setShowAddAccount] = useState(false)
+  const [newAccountName, setNewAccountName] = useState('')
+  const [newAccountIcon, setNewAccountIcon] = useState('💳')
+  const [showAccountEmojiPicker, setShowAccountEmojiPicker] = useState(false)
+  const [accountError, setAccountError] = useState('')
+
+  // Fetch categories and accounts from database
   const categories = useLiveQuery(() => db.categories.toArray())
+  const accounts = useLiveQuery(() => db.accounts.toArray())
 
   // Filter out Settlement category from the picker (it's system-only for settle up)
   const selectableCategories = categories?.filter((c) => c.name !== 'Settlement') || []
@@ -76,6 +89,36 @@ export function RecordForm({
   const handleAddUser = async (email: string, alias: string) => {
     const result = await addUser(email, alias)
     return { success: result.success, error: result.success ? undefined : result.error }
+  }
+
+  const handleAddAccount = async () => {
+    setAccountError('')
+    if (!newAccountName.trim()) {
+      setAccountError('Account name is required')
+      return
+    }
+
+    // Check for duplicate name
+    const existing = accounts?.find(
+      (a) => a.name.toLowerCase() === newAccountName.trim().toLowerCase()
+    )
+    if (existing) {
+      setAccountError('An account with this name already exists')
+      return
+    }
+
+    const newAccount: Account = {
+      id: generateUUID(),
+      name: newAccountName.trim(),
+      icon: newAccountIcon,
+      createdAt: now(),
+    }
+
+    await db.accounts.add(newAccount)
+    setAccount(newAccount.id) // Select the newly created account
+    setNewAccountName('')
+    setNewAccountIcon('💳')
+    setShowAddAccount(false)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -141,6 +184,7 @@ export function RecordForm({
       paidFor: finalPaidFor,
       shareType,
       groupId,
+      account: trackAccount && account ? account : undefined,
       comments: comments.trim(),
     })
   }
@@ -232,6 +276,131 @@ export function RecordForm({
           ))}
         </div>
       </div>
+
+      {/* Account Tracking Toggle */}
+      <div className="flex items-center justify-between rounded-xl bg-surface-tertiary px-4 py-3">
+        <div>
+          <span className="font-medium text-content">Track account</span>
+          <p className="text-sm text-content-secondary">Record which account was used</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setTrackAccount(!trackAccount)}
+          className={`relative h-6 w-11 rounded-full transition-colors ${
+            trackAccount ? 'bg-primary' : 'bg-content-tertiary'
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+              trackAccount ? 'translate-x-5' : ''
+            }`}
+          />
+        </button>
+      </div>
+
+      {/* Account Selector - only show when tracking is enabled */}
+      {trackAccount && (
+        <div>
+          <div className="flex items-center justify-between">
+            <label className={labelClassName}>Account</label>
+            {!showAddAccount && (
+              <button
+                type="button"
+                onClick={() => setShowAddAccount(true)}
+                className="text-sm font-medium text-primary hover:text-primary-hover"
+              >
+                + Add New
+              </button>
+            )}
+          </div>
+
+          {/* Inline Add Account Form */}
+          {showAddAccount && (
+            <div className="mt-2 rounded-xl border border-border-default bg-surface-tertiary p-3">
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setShowAccountEmojiPicker(!showAccountEmojiPicker)}
+                    className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface text-xl transition-colors hover:bg-surface-hover"
+                  >
+                    {newAccountIcon}
+                  </button>
+                  {showAccountEmojiPicker && (
+                    <div className="absolute left-0 top-full z-10 mt-1">
+                      <EmojiPicker
+                        onSelect={(emoji) => {
+                          setNewAccountIcon(emoji)
+                          setShowAccountEmojiPicker(false)
+                        }}
+                        onClose={() => setShowAccountEmojiPicker(false)}
+                      />
+                    </div>
+                  )}
+                </div>
+                <input
+                  type="text"
+                  value={newAccountName}
+                  onChange={(e) => {
+                    setNewAccountName(e.target.value)
+                    setAccountError('')
+                  }}
+                  placeholder="e.g., Cash, HDFC Bank"
+                  className="flex-1 rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-content focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+              {accountError && <p className="mt-1 text-xs text-red-500">{accountError}</p>}
+              <div className="mt-2 flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleAddAccount}
+                  className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-hover"
+                >
+                  Add
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddAccount(false)
+                    setNewAccountName('')
+                    setNewAccountIcon('💳')
+                    setAccountError('')
+                  }}
+                  className="rounded-lg bg-surface px-3 py-1.5 text-sm font-medium text-content-secondary hover:bg-surface-hover"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Account Selection */}
+          {accounts && accounts.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {accounts.map((acc) => (
+                <button
+                  key={acc.id}
+                  type="button"
+                  onClick={() => setAccount(acc.id)}
+                  className={`rounded-xl px-3 py-2 text-sm font-medium transition-all ${
+                    account === acc.id
+                      ? 'bg-primary text-white shadow-sm'
+                      : 'bg-surface-tertiary text-content-secondary hover:bg-surface-hover'
+                  }`}
+                >
+                  {acc.icon} {acc.name}
+                </button>
+              ))}
+            </div>
+          ) : (
+            !showAddAccount && (
+              <p className="mt-2 text-sm text-content-tertiary">
+                No accounts yet. Click "+ Add New" to create your first account.
+              </p>
+            )
+          )}
+        </div>
+      )}
 
       {/* Split Toggle */}
       <div className="flex items-center justify-between rounded-xl bg-surface-tertiary px-4 py-3">

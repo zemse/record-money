@@ -14,6 +14,7 @@ import {
   getGroupsFromRecords,
   canShareFile,
   shareFile,
+  stripAccountsFromRecords,
 } from '../utils/dataTransport'
 
 export function RecordsPage() {
@@ -32,6 +33,7 @@ export function RecordsPage() {
   // Export states
   const [showExportMenu, setShowExportMenu] = useState(false)
   const [exportMessage, setExportMessage] = useState('')
+  const [stripAccountsOnExport, setStripAccountsOnExport] = useState(false)
 
   const records = useLiveQuery(() => db.records.orderBy('date').reverse().toArray())
   const users = useLiveQuery(() => db.users.toArray())
@@ -89,8 +91,11 @@ export function RecordsPage() {
   const handleExportUrl = async (recordsToExport: ExpenseRecord[]) => {
     if (!users) return
 
-    const exportUsers = getUsersFromRecords(recordsToExport, users)
-    const result = generateExportUrl(recordsToExport, exportUsers)
+    const finalRecords = stripAccountsOnExport
+      ? stripAccountsFromRecords(recordsToExport)
+      : recordsToExport
+    const exportUsers = getUsersFromRecords(finalRecords, users)
+    const result = generateExportUrl(finalRecords, exportUsers)
 
     if (result.success) {
       const copied = await copyToClipboard(result.url)
@@ -106,10 +111,13 @@ export function RecordsPage() {
   const handleExportFile = (recordsToExport: ExpenseRecord[]) => {
     if (!users || !groups) return
 
-    const exportUsers = getUsersFromRecords(recordsToExport, users)
-    const exportGroups = getGroupsFromRecords(recordsToExport, groups)
+    const finalRecords = stripAccountsOnExport
+      ? stripAccountsFromRecords(recordsToExport)
+      : recordsToExport
+    const exportUsers = getUsersFromRecords(finalRecords, users)
+    const exportGroups = getGroupsFromRecords(finalRecords, groups)
 
-    exportToFile(recordsToExport, exportUsers, exportGroups)
+    exportToFile(finalRecords, exportUsers, exportGroups)
     setShowExportMenu(false)
     setExportMessage('File downloaded!')
     setTimeout(() => setExportMessage(''), 3000)
@@ -118,10 +126,13 @@ export function RecordsPage() {
   const handleShareFile = async (recordsToExport: ExpenseRecord[]) => {
     if (!users || !groups) return
 
-    const exportUsers = getUsersFromRecords(recordsToExport, users)
-    const exportGroups = getGroupsFromRecords(recordsToExport, groups)
+    const finalRecords = stripAccountsOnExport
+      ? stripAccountsFromRecords(recordsToExport)
+      : recordsToExport
+    const exportUsers = getUsersFromRecords(finalRecords, users)
+    const exportGroups = getGroupsFromRecords(finalRecords, groups)
 
-    const result = await shareFile(recordsToExport, exportUsers, exportGroups)
+    const result = await shareFile(finalRecords, exportUsers, exportGroups)
     setShowExportMenu(false)
 
     if (!result.success && result.error !== 'Share cancelled') {
@@ -228,6 +239,7 @@ export function RecordsPage() {
             users={users || []}
             groups={groups || []}
             currentUserEmail={settings?.currentUserEmail}
+            defaultAccountId={settings?.defaultAccountId}
             onSubmit={(data) => {
               if (editingRecord) {
                 handleUpdate(editingRecord.uuid, data)
@@ -278,16 +290,29 @@ export function RecordsPage() {
             {showExportMenu && (
               <>
                 <div className="fixed inset-0 z-10" onClick={() => setShowExportMenu(false)} />
-                <div className="absolute right-0 z-20 mt-2 w-56 rounded-xl border border-border-default bg-surface p-2 shadow-lg">
+                <div className="absolute right-0 z-20 mt-2 w-64 rounded-xl border border-border-default bg-surface p-2 shadow-lg">
                   <p className="px-3 py-1 text-xs font-medium text-content-secondary">
                     {hasActiveFilters
                       ? `Export ${filteredRecords.length} filtered records`
                       : `Export all ${records?.length || 0} records`}
                   </p>
 
+                  {/* Strip accounts option */}
+                  <label className="mx-3 mt-2 flex cursor-pointer items-center gap-2 rounded-lg bg-surface-tertiary px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={stripAccountsOnExport}
+                      onChange={(e) => setStripAccountsOnExport(e.target.checked)}
+                      className="h-4 w-4 rounded border-border-default text-primary focus:ring-primary"
+                    />
+                    <span className="text-xs text-content-secondary">
+                      Strip account info (privacy)
+                    </span>
+                  </label>
+
                   <button
                     onClick={() => handleExportUrl(filteredRecords)}
-                    className="mt-1 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
+                    className="mt-2 flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm text-content hover:bg-surface-tertiary"
                   >
                     <span>🔗</span>
                     <span>Copy Share Link</span>
