@@ -81,17 +81,26 @@ One chunk per ~100 mutations. Chunk itself is encrypted to hide mutation IDs.
 
 Group MutationChunks are also encrypted with group sym key.
 
-## Person (Group Member)
+## Person
 
-Part of GroupManifest.database.people (encrypted within GroupManifest):
+All individuals are tracked as Persons with UUID as primary identifier. See `01-data-models.md` for full Person interface.
+
+Part of database (personal or group, encrypted):
 
 ```typescript
 {
-  uuid, name, email?,
-  devices: [{authPublicKey, ipnsPublicKey}],  // self-managed, peers use PeerDirectory
-  addedAt, addedBy
+  uuid: string;             // primary identifier, immutable
+  name: string;
+  email?: string;
+  devices?: DeviceInfo[];   // populated in sync mode, self-managed
+  addedAt: number;
+  addedBy?: string;         // UUID of person who added them
+  isSelf?: boolean;         // true if this is the current user
+  isPlaceholder?: boolean;  // true if not yet claimed an account
 }
 ```
+
+**Placeholder persons** are created when someone is added to expenses before they have an account. They can later claim the UUID via invite link or merge with their new account.
 
 ## Encryption Summary
 

@@ -59,22 +59,140 @@ Supported providers:
 
 Provider config stored in device settings.
 
-## Mutation Signing
+## Mutation Structure
+
+Mutations track all changes to records, persons, and groups using field-level granularity.
 
 ```typescript
-{
-  uuid: string,              // UUIDv4
-  id: number,                // per-device incremental
-  kind: 'create'|'update'|'delete'|'override',
-  recordType: 'record'|'device'|'person'|'group',
-  targetUuid?: string,       // UUIDv4 of target record (for update/delete/override)
-  dataOld?: any,
-  dataNew?: any,
-  timestamp: number,         // Unix ms
-  authorDevicePublicKey: Uint8Array,  // 65-byte uncompressed P-256 public key
-  signature: Uint8Array      // 64-byte ECDSA P-256 signature (r || s)
+interface Mutation {
+  uuid: string;                    // UUIDv4 - mutation identifier
+  id: number;                      // per-device incremental
+  targetUuid: string;              // UUID of record/person/group being modified
+  targetType: 'record' | 'person' | 'group';
+  operation: MutationOperation;
+  timestamp: number;               // Unix ms
+  authorDevicePublicKey: Uint8Array;  // 65-byte uncompressed P-256 public key
+  signature: Uint8Array;           // 64-byte ECDSA P-256 signature (r || s)
+}
+
+type MutationOperation =
+  | CreateOp
+  | DeleteOp
+  | UpdateOp;
+
+interface CreateOp {
+  type: 'create';
+  data: Record | Person | Group;   // full object for creation
+}
+
+interface DeleteOp {
+  type: 'delete';
+}
+
+interface UpdateOp {
+  type: 'update';
+  changes: FieldChange[];          // list of field-level changes
 }
 ```
+
+### Field-Level Changes
+
+Updates track individual field changes for precise conflict detection.
+
+```typescript
+type FieldChange =
+  | ScalarChange
+  | ArrayAddOp
+  | ArrayRemoveOp
+  | ArrayUpdateOp;
+
+// Scalar field change (title, amount, category, etc.)
+interface ScalarChange {
+  field: string;
+  old: any;
+  new: any;
+}
+
+// Array operations for paidBy/paidFor (keyed by personUuid)
+interface ArrayAddOp {
+  field: 'paidBy' | 'paidFor';
+  op: 'add';
+  key: string;              // personUuid
+  value: Participant;
+}
+
+interface ArrayRemoveOp {
+  field: 'paidBy' | 'paidFor';
+  op: 'remove';
+  key: string;              // personUuid
+  oldValue: Participant;
+}
+
+interface ArrayUpdateOp {
+  field: 'paidBy' | 'paidFor';
+  op: 'update';
+  key: string;              // personUuid
+  old: Participant;
+  new: Participant;
+}
+```
+
+### Example Mutations
+
+**Create record:**
+```typescript
+{
+  uuid: "mut-123",
+  id: 1,
+  targetUuid: "rec-456",
+  targetType: "record",
+  operation: {
+    type: "create",
+    data: { uuid: "rec-456", title: "Lunch", amount: 500, ... }
+  },
+  timestamp: 1705123456789,
+  authorDevicePublicKey: ...,
+  signature: ...
+}
+```
+
+**Update record (scalar fields):**
+```typescript
+{
+  uuid: "mut-124",
+  id: 2,
+  targetUuid: "rec-456",
+  targetType: "record",
+  operation: {
+    type: "update",
+    changes: [
+      { field: "amount", old: 500, new: 600 },
+      { field: "title", old: "Lunch", new: "Team Lunch" }
+    ]
+  },
+  ...
+}
+```
+
+**Update record (participant change):**
+```typescript
+{
+  uuid: "mut-125",
+  id: 3,
+  targetUuid: "rec-456",
+  targetType: "record",
+  operation: {
+    type: "update",
+    changes: [
+      { field: "paidBy", op: "add", key: "person-789", value: { personUuid: "person-789", share: 1 } },
+      { field: "paidFor", op: "update", key: "person-123", old: { personUuid: "person-123", share: 1 }, new: { personUuid: "person-123", share: 2 } }
+    ]
+  },
+  ...
+}
+```
+
+## Mutation Signing
 
 **Signing process:**
 1. Build mutation object (without signature field)

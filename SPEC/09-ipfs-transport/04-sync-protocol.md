@@ -10,26 +10,50 @@ When sync is not enabled (no devices paired):
 
 When user pairs their first device, existing solo data is automatically migrated:
 
-1. **Seal existing records**: Generate `create` mutation for each existing record
-2. **Batch sign**: Sign all mutations with device signing key
-3. **Assign IDs**: Mutations get sequential IDs starting from 1
-4. **Publish**: Include sealed mutations in initial manifest
-5. **Sync**: Other device receives all sealed data as normal mutations
+1. **Create self person**: Generate `create` mutation for current user as Person (with `isSelf: true`)
+2. **Seal existing persons**: Generate `create` mutation for each existing contact
+3. **Seal existing records**: Generate `create` mutation for each existing record
+4. **Batch sign**: Sign all mutations with device signing key
+5. **Assign IDs**: Mutations get sequential IDs starting from 1
+6. **Publish**: Include sealed mutations in initial manifest
+7. **Sync**: Other device receives all sealed data as normal mutations
 
 ```typescript
 // Migration pseudocode
+const mutations = [];
+
+// First, create self person
+const selfPerson = {
+  uuid: generateUUID(),
+  name: currentUserName,
+  email: currentUserEmail,
+  isSelf: true,
+  addedAt: Date.now()
+};
+mutations.push(createMutation('person', selfPerson));
+
+// Then existing contacts
+for (const person of existingPersons) {
+  mutations.push(createMutation('person', person));
+}
+
+// Then records
 for (const record of existingSoloRecords) {
+  mutations.push(createMutation('record', record));
+}
+
+function createMutation(targetType, data) {
   const mutation = {
     uuid: generateUUID(),
     id: nextMutationId++,
-    kind: 'create',
-    recordType: 'record',
-    dataNew: record,
+    targetUuid: data.uuid,
+    targetType,
+    operation: { type: 'create', data },
     timestamp: Date.now(),
     authorDevicePublicKey: deviceAuthPublicKey
   };
   sign(mutation);
-  mutations.push(mutation);
+  return mutation;
 }
 ```
 
@@ -64,19 +88,41 @@ Multi-gateway: poll multiple IPFS gateways, use highest IPNS seq number
 
 ## Conflict Detection
 
-Conflict = same record, same field, different values
+With field-level mutations, conflicts are detected at the field level:
+
+**Conflict** = same record, same field, same old value, different new values
 
 ```
-A: edit X.amount from 100 to 150
-B: edit X.amount from 100 to 200
-→ conflict
+A: { field: "amount", old: 100, new: 150 }
+B: { field: "amount", old: 100, new: 200 }
+→ CONFLICT (same field, same old value, different new values)
 ```
 
-No conflict if different fields edited.
+**No conflict** if different fields edited:
+```
+A: { field: "amount", old: 100, new: 150 }
+B: { field: "title", old: "Lunch", new: "Team Lunch" }
+→ AUTO-MERGE (different fields, apply both)
+```
+
+**Array operations:**
+```
+A: { field: "paidBy", op: "add", key: "person-1", ... }
+B: { field: "paidBy", op: "add", key: "person-2", ... }
+→ NO CONFLICT (adding different participants)
+
+A: { field: "paidBy", op: "update", key: "person-1", old: {share: 1}, new: {share: 2} }
+B: { field: "paidBy", op: "update", key: "person-1", old: {share: 1}, new: {share: 3} }
+→ CONFLICT (same participant, same old value)
+
+A: { field: "paidBy", op: "remove", key: "person-1", ... }
+B: { field: "paidBy", op: "update", key: "person-1", ... }
+→ CONFLICT (remove vs update on same participant)
+```
 
 ## Conflict Resolution
 
-UI: side-by-side comparison showing all conflicting values
+UI: side-by-side comparison showing conflicting field values
 
 **Binary conflict (2 devices):**
 - Show both values + timestamps + authors
@@ -86,14 +132,15 @@ UI: side-by-side comparison showing all conflicting values
 - Show all conflicting values side-by-side
 - Display for each: value, timestamp, author device name
 - User picks one value as winner
-- Create override mutation for winning value
-- Mark all other conflicting mutations as ignored
 
 **Resolution actions:**
-- Keep Mine → mark incoming mutation(s) as ignored
-- Keep Theirs/Pick Winner → create override mutation
+- Keep Mine → ignore incoming change for that field
+- Keep Theirs/Pick Winner → create update mutation with winning value
+- Winner mutation uses loser's `new` as `old` to maintain chain
 
-Bulk conflicts: scroll UI, left/right to choose
+**Auto-merge:** When no conflicts exist (different fields changed), apply all changes automatically without user intervention.
+
+Bulk conflicts: scroll UI, left/right to choose per field
 
 ## Publishing
 

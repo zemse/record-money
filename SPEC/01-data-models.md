@@ -4,7 +4,7 @@
 
 **IndexedDB** (not localStorage) for higher storage limits (~50MB+ vs 5-10MB).
 
-Stores: records, users, groups, settings.
+Stores: records, persons, groups, settings.
 
 ---
 
@@ -34,34 +34,84 @@ interface Record {
 }
 
 interface Participant {
-  email: string; // normalized: lowercase, trimmed
+  personUuid: string; // references Person.uuid
   share: number; // interpretation depends on shareType
 }
 ```
 
 ### Share Type Examples
 
-| shareType    | paidFor                                                            | Interpretation |
-| ------------ | ------------------------------------------------------------------ | -------------- |
-| `equal`      | `[{email: "a@x.com", share: 1}, {email: "b@x.com", share: 1}]`     | Split equally  |
-| `percentage` | `[{email: "a@x.com", share: 60}, {email: "b@x.com", share: 40}]`   | 60/40 split    |
-| `exact`      | `[{email: "a@x.com", share: 300}, {email: "b@x.com", share: 200}]` | Exact amounts  |
-| `shares`     | `[{email: "a@x.com", share: 2}, {email: "b@x.com", share: 1}]`     | 2:1 ratio      |
+| shareType    | paidFor                                                                        | Interpretation |
+| ------------ | ------------------------------------------------------------------------------ | -------------- |
+| `equal`      | `[{personUuid: "uuid-a", share: 1}, {personUuid: "uuid-b", share: 1}]`         | Split equally  |
+| `percentage` | `[{personUuid: "uuid-a", share: 60}, {personUuid: "uuid-b", share: 40}]`       | 60/40 split    |
+| `exact`      | `[{personUuid: "uuid-a", share: 300}, {personUuid: "uuid-b", share: 200}]`     | Exact amounts  |
+| `shares`     | `[{personUuid: "uuid-a", share: 2}, {personUuid: "uuid-b", share: 1}]`         | 2:1 ratio      |
 
 In cases like `percentage`, need to sanity check if the values add up to 100.
 
 ---
 
-## User
+## Person
+
+Every individual (user or contact) is identified by UUID. Persons can be:
+- **Self**: The current user (has devices in sync mode)
+- **Contact**: Someone added to expenses (may or may not have the app)
+- **Placeholder**: Added before they create an account, can be claimed later
 
 ```typescript
-interface User {
-  email: string; // primary identifier, normalized
-  alias: string; // display name
+interface Person {
+  uuid: string; // primary identifier, immutable
+  name: string; // display name
+  email?: string; // optional, can change
+  devices?: DeviceInfo[]; // populated in sync mode
+  addedAt: number; // timestamp ms
+  addedBy?: string; // UUID of person who added them
+  isSelf?: boolean; // true if this is the current user
+  isPlaceholder?: boolean; // true if not yet claimed an account
+}
+
+interface DeviceInfo {
+  authPublicKey: Uint8Array; // P-256 signing key
+  ipnsPublicKey: Uint8Array; // Ed25519 IPNS key
 }
 ```
 
-**Email normalization:** lowercase, trim whitespace.
+**Email normalization:** lowercase, trim whitespace (when present).
+
+### Placeholder Claiming
+
+When a placeholder person creates their own account:
+
+**Option 1: Claim via invite link**
+1. Inviter sends invite link that includes placeholder's UUID
+2. Recipient opens link, sees they're being invited to claim existing identity
+3. On acceptance, recipient adopts the placeholder UUID
+4. Placeholder person entry is updated: `isPlaceholder: false`, devices added
+5. All existing records referencing that UUID remain valid
+
+**Option 2: Merge accounts later**
+1. User creates new account (new UUID) independently
+2. Later discovers they have a placeholder in someone's group
+3. User initiates merge: "I am this person"
+4. Group admin verifies (emoji check or similar)
+5. Merge mutation created: updates all references from old UUID to new UUID
+6. Old placeholder person entry deleted
+
+**Merge mutation:**
+```typescript
+{
+  targetUuid: "new-person-uuid",
+  targetType: "person",
+  operation: {
+    type: "update",
+    changes: [
+      { field: "mergedFrom", old: null, new: "old-placeholder-uuid" }
+    ]
+  }
+}
+// Separate mutations update all records that referenced old UUID
+```
 
 ---
 
@@ -71,13 +121,13 @@ interface User {
 interface Group {
   uuid: string;
   name: string;
-  members: string[]; // emails
+  members: string[]; // person UUIDs
   createdAt: number;
   updatedAt: number;
 }
 ```
 
-- Default group exists for ungrouped expenses
+- Default group (Personal Ledger) exists for ungrouped expenses
 - Each record belongs to one group (or default)
 
 ---
@@ -91,14 +141,14 @@ interface Settings {
   lastUsedCurrency: string; // ISO 4217
   defaultDisplayCurrency: string; // ISO 4217, for balance summaries
   theme: "light" | "dark" | "system"; // default: 'system'
-  currentUserEmail?: string; // email of "me" for balance calculations
+  currentPersonUuid?: string; // UUID of "me" for balance calculations
 }
 ```
 
 - `lastUsedCurrency`: When user tries to create a new entry anywhere, by default use the `lastUsedCurrency` which user can switch to something else. If user successfully creates a new entry then we update the `lastUsedCurrency`.
 - `defaultDisplayCurrency`: The currency used to display balance summaries on Dashboard. All balances are converted to this currency for the overall "you owe" / "owed to you" totals. User can change this in Settings.
 - `theme`: User's preferred color scheme.
-- `currentUserEmail`: The user marked as "me" via "Set as Me" button. Used to show personalized balance views ("you owe" vs "owed to you").
+- `currentPersonUuid`: The person marked as "me" via "Set as Me" button. Used to show personalized balance views ("you owe" vs "owed to you").
 
 ---
 
@@ -110,7 +160,7 @@ const db = new Dexie("RecordMoney");
 
 db.version(1).stores({
   records: "uuid, groupId, date, category, sourceHash",
-  users: "email",
+  persons: "uuid, email", // email indexed for lookups
   groups: "uuid",
   settings: "key", // single row, key = 'main'
 });
