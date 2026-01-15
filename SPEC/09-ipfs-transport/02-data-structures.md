@@ -21,8 +21,8 @@ Keys are distributed via PeerDirectory (ECDH encrypted per-recipient).
 {
   // Encrypted with Personal Key (self devices only)
   databaseCid: CID,                        // → encrypted full db (personal + group data)
-  mutationIdEncrypted: EncryptedValue,     // encrypted with Personal Key
-  mutationIndexEncrypted: EncryptedValue,  // encrypted with Personal Key
+  latestMutationId: EncryptedValue,        // encrypted with Personal Key
+  chunkIndex: EncryptedValue,              // encrypted with Personal Key
   // decrypts to: [{startId, endId, cid}]
 
   // Encrypted with Broadcast Key (self devices + peers)
@@ -70,11 +70,11 @@ Used to:
     ciphertext  // ECDH encrypted per-recipient, contains:
     // {
     //   personalKey?: Uint8Array,   // 32-byte Personal Key (only for self devices)
-    //   broadcastKey: Uint8Array,   // 32-byte Broadcast Key (for self devices and peers)
+    //   broadcastKey: Uint8Array,   // 32-byte Broadcast Key (publisher's key)
     //   sharedGroups: [{
     //     groupUuid: string,        // group identifier
     //     symmetricKey: Uint8Array, // 32-byte Group Key
-    //     manifestCid: CID          // points to my GroupManifest for this group
+    //     manifestCid: CID          // points to publisher's GroupManifest
     //   }]
     // }
   }]
@@ -86,6 +86,8 @@ Randomized order to prevent analysis.
 **Entry types:**
 - **Self device entry:** Contains `personalKey` + `broadcastKey` + `sharedGroups`
 - **Peer entry:** Contains `broadcastKey` + `sharedGroups` (no `personalKey`)
+
+**Note:** The `broadcastKey` and `manifestCid` belong to the **publisher** (owner of this PeerDirectory), not the recipient. Recipients use the Broadcast Key to decrypt the publisher's DeviceRing.
 
 **Note:** PeerDirectory entries may exist for peers not yet in a group (pending invites) or may lag behind actual group membership. GroupManifest.database.people is the source of truth for who is in a group.
 
@@ -103,22 +105,27 @@ One chunk per ~100 mutations. Chunk itself is encrypted to hide mutation IDs.
 
 ## GroupManifest
 
-**Source of truth** for group data and membership.
+**Source of truth** for group data and membership. Each member publishes their own GroupManifest.
 
 ```typescript
 // Entire manifest is encrypted with Group Key
 // Decrypts to:
 {
   database: {
-    records: Record[],       // group expenses
+    records: Record[],       // group expenses (merged from all members)
     people: Person[]         // SOURCE OF TRUTH for group membership
   },
-  mutationIndex: [{startId, endId, cid}],  // cids point to encrypted group MutationChunks
-  currentMutationId: number
+  chunkIndex: [{startId, endId, cid}],  // cids point to encrypted group MutationChunks
+  latestMutationId: number              // highest mutation ID in THIS manifest (publisher's own)
 }
 ```
 
 Group MutationChunks are also encrypted with Group Key.
+
+**Per-member publishing:** Each group member publishes their own GroupManifest containing:
+- Their own mutations for this group (`latestMutationId` tracks their sequence)
+- Merged database state from all members they've synced with
+- The CID is shared via PeerDirectory `sharedGroups[].manifestCid`
 
 **Membership determination:**
 - A person is a member if they have an entry in `database.people`
@@ -132,17 +139,28 @@ All individuals are tracked as Persons with UUID as primary identifier. See `01-
 Part of database (personal or group, encrypted):
 
 ```typescript
-{
+interface Person {
   uuid: string;             // primary identifier, immutable
   name: string;
   email?: string;
-  devices?: DeviceInfo[];   // populated in sync mode, self-managed
+  devices?: DeviceInfo[];   // devices belonging to this person
   addedAt: number;
   addedBy?: string;         // UUID of person who added them
   isSelf?: boolean;         // true if this is the current user
   isPlaceholder?: boolean;  // true if not yet claimed an account
 }
+
+interface DeviceInfo {
+  deviceId: string;         // SHA-256(authPublicKey) - unique device identifier
+  ipnsPublicKey: Uint8Array;  // 32-byte Ed25519 public key - for polling
+  authPublicKey: Uint8Array;  // 65-byte P-256 public key - for ECDH/verification
+}
 ```
+
+**Device management in groups:**
+- When a member joins, the inviter adds the member's devices to `Person.devices`
+- Members manage their own `devices` array (add/remove their own devices via mutations)
+- Other members read `Person.devices` to discover which IPNS feeds to poll
 
 **Placeholder persons** are created when someone is added to expenses before they have an account. They can later claim the UUID via invite link or merge with their new account.
 
@@ -151,7 +169,7 @@ Part of database (personal or group, encrypted):
 | Structure | Encryption | Who Can Decrypt |
 |-----------|------------|-----------------|
 | Database (databaseCid) | Personal Key | Self devices only |
-| Mutation ID & Index | Personal Key | Self devices only |
+| latestMutationId & chunkIndex | Personal Key | Self devices only |
 | MutationChunk | Personal Key | Self devices only |
 | Mutation content | Personal Key | Self devices only |
 | DeviceRing | Broadcast Key | Self devices + Peers |

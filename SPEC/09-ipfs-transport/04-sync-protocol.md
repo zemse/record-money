@@ -100,7 +100,7 @@ Each device maintains its own mutation sequence:
 {
   devices: [{
     ...
-    lastSyncedIdEncrypted  // "I've seen mutations 1-47 from this device"
+    lastSyncedId  // "I've seen mutations 1-47 from this device"
   }]
 }
 ```
@@ -145,7 +145,7 @@ When device reconnects after being offline:
 
 1. **Publish own pending mutations** first
 2. **Poll other devices** for their new mutations
-3. **For each device**, compare their `currentMutationId` with our `lastSyncedIdForThem`
+3. **For each device**, compare their `latestMutationId` with our `lastSyncedIdForThem`
 4. **Fetch new mutations** from their mutation index
 5. **Check for conflicts** with our pending/published mutations
 6. **Auto-merge** non-conflicting changes
@@ -217,8 +217,8 @@ Multi-gateway: poll multiple IPFS gateways, use highest IPNS seq number
 ## Sync Flow
 
 1. Poll device IPNS → get manifest
-2. Decrypt their mutationId, compare with our lastSyncedId for them
-3. If higher → fetch new mutations from mutationIndex
+2. Decrypt their latestMutationId, compare with our lastSyncedId for them
+3. If higher → fetch new mutations from chunkIndex
 4. Verify each mutation (signature, known author, reasonable timestamp)
 5. Dedupe by uuid (skip if already have)
 6. Check conflicts

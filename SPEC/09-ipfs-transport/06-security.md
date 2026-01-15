@@ -94,15 +94,15 @@ for (const peer of peers) {
 ```typescript
 const newDatabaseCid = await upload(encrypt(database, newPersonalKey));
 const newMutationChunks = await reencryptChunks(mutations, newPersonalKey);
-const newMutationIndex = buildIndex(newMutationChunks);
+const newChunkIndex = buildIndex(newMutationChunks);
 ```
 
 **Step 6: Publish updated manifest**
 ```typescript
 const manifest = {
   databaseCid: newDatabaseCid,
-  mutationIdEncrypted: encrypt(currentMutationId, newPersonalKey),
-  mutationIndexEncrypted: encrypt(newMutationIndex, newPersonalKey),
+  latestMutationId: encrypt(latestMutationId, newPersonalKey),
+  chunkIndex: encrypt(newChunkIndex, newPersonalKey),
   deviceRingCid: newDeviceRingCid,  // encrypted with new Broadcast Key
   peerDirectoryCid: newPeerDirectoryCid
 };

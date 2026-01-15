@@ -89,14 +89,18 @@ Inviter simply does not approve (doesn't add to PeerDirectory). Temp IPNS respon
 ### New person joining
 
 After new person joins via invite link:
-1. New person decrypts GroupManifest → sees all existing people's devices
-2. New person adds each existing person to own PeerDirectory
-3. Existing people see new person in GroupManifest → add to their PeerDirectory
-4. All people can now poll each other's devices
+1. **Inviter adds new person** to GroupManifest with their `devices` populated
+2. **New person fetches GroupManifest** → sees all existing members in `database.people`
+3. **New person reads `Person.devices`** for each member → gets their `ipnsPublicKey` and `authPublicKey`
+4. **New person adds each member** to own PeerDirectory (with Broadcast Key for ECDH)
+5. **Existing members poll** inviter's GroupManifest → see new person → add to their PeerDirectory
+6. **All members can now poll** each other's devices using `ipnsPublicKey` from `Person.devices`
 
 ### Existing person adds new device
 
-Person adds new device → updates `selfDevices` in all PeerDirectory entries → peers poll, see new device → start polling it
+1. Person adds new device to their DeviceRing (encrypted with Broadcast Key)
+2. Person creates mutation to add device to their `Person.devices` in GroupManifest
+3. Other members poll GroupManifest → see new device in `Person.devices` → start polling it
 
 ## Removing People
 
@@ -148,4 +152,9 @@ Create close mutation → stop polling → keep data for reference → hide from
 
 ## Personal Ledger
 
-Default group (displayed as "Personal Ledger" in UI), only own devices, not shared. For personal expense tracking. Other groups displayed as "Group Ledgers" in UI.
+A special group containing only the user themselves:
+- Has its own Group Key (like any group)
+- Only self devices are members
+- Not shared with peers
+- Displayed as "Personal Ledger" in UI (other groups shown as "Group Ledgers")
+- Used for personal expense tracking that doesn't involve others
