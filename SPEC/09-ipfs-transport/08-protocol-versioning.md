@@ -85,7 +85,7 @@ interface Group {
 }
 ```
 
-**One proposal per person:** Later proposals from same person update their `maxSupportedVersion`.
+**One proposal per person:** Upgrades are approved per person, not per device. User only needs to respond once (from any device). Later proposals from same person update their `maxSupportedVersion`. If user has multiple devices with different client versions, they should propose with the lowest version among their devices.
 
 ## Client Behavior
 
