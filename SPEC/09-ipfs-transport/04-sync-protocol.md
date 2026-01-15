@@ -3,8 +3,8 @@
 ## Solo Mode
 
 When sync is not enabled (no devices paired):
-- Records stored directly in IndexedDB (no transactions)
-- No signing, no changelog
+- Records stored directly in IndexedDB (no mutations)
+- No signing, no mutation log
 - On first device pair: existing data NOT migrated to sync
 - User starts fresh with sync - old local data remains accessible but separate
 
@@ -26,9 +26,9 @@ Multi-gateway: poll multiple IPFS gateways, use highest IPNS seq number
 ## Sync Flow
 
 1. Poll device IPNS → get manifest
-2. Decrypt their changeId, compare with our lastSyncedId for them
-3. If higher → fetch new transactions from changeLogIndex
-4. Verify each tx (signature, known author, reasonable timestamp)
+2. Decrypt their mutationId, compare with our lastSyncedId for them
+3. If higher → fetch new mutations from mutationIndex
+4. Verify each mutation (signature, known author, reasonable timestamp)
 5. Dedupe by uuid (skip if already have)
 6. Check conflicts
 7. Apply or queue for conflict resolution
@@ -58,20 +58,20 @@ UI: side-by-side comparison showing all conflicting values
 - Show all conflicting values side-by-side
 - Display for each: value, timestamp, author device name
 - User picks one value as winner
-- Create override tx for winning value
-- Mark all other conflicting txs as ignored
+- Create override mutation for winning value
+- Mark all other conflicting mutations as ignored
 
 **Resolution actions:**
-- Keep Mine → mark incoming tx(s) as ignored
-- Keep Theirs/Pick Winner → create override tx
+- Keep Mine → mark incoming mutation(s) as ignored
+- Keep Theirs/Pick Winner → create override mutation
 
 Bulk conflicts: scroll UI, left/right to choose
 
 ## Publishing
 
 On local change:
-1. Create + sign transaction
-2. Append to changeLog
+1. Create + sign mutation
+2. Append to mutations
 3. Rebuild manifest
 4. Upload to IPFS, update IPNS, unpin old
 
@@ -79,16 +79,16 @@ NOT on import (avoid cascade).
 
 ## Republishing (Full Replication)
 
-Every device maintains the complete transaction ledger:
-- All transactions from all paired devices
-- All transactions from all group members
+Every device maintains the complete mutation ledger:
+- All mutations from all paired devices
+- All mutations from all group members
 - No hop limits - full replication
 
-Store imported txs with original signature. Include in own changeLog for faster propagation.
+Store imported mutations with original signature. Include in own mutations for faster propagation.
 
 C can get A's changes via B without waiting for A.
 
-**Note:** Storage grows linearly with total transactions across all users. Consider adding compaction in future (snapshot + prune old txs).
+**Note:** Storage grows linearly with total mutations across all users. Consider adding compaction in future (snapshot + prune old mutations).
 
 ## Malformed Content
 
@@ -96,4 +96,4 @@ If verification fails: stop pulling from device, show UI warning with device/own
 
 ## Full Resync (fallback)
 
-If changeLog sync fails: fetch full database, merge or overwrite (user choice).
+If mutations sync fails: fetch full database, merge or overwrite (user choice).

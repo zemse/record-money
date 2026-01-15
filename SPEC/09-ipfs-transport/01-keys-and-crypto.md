@@ -4,7 +4,7 @@
 
 | Key | Purpose |
 |-----|---------|
-| Signing keypair (P-256) | Sign transactions, SecureEnclave compatible |
+| Signing keypair (P-256) | Sign mutations, SecureEnclave compatible |
 | IPNS keypair (Ed25519) | Publish to own feed |
 | Symmetric key (AES-256-GCM) | Encrypt content |
 
@@ -44,7 +44,7 @@ Supported providers:
 
 Provider config stored in device settings.
 
-## Transaction Signing
+## Mutation Signing
 
 ```typescript
 {

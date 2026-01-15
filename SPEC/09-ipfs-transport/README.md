@@ -27,6 +27,6 @@ Groups: each member publishes own feed, all poll all.
 ## Terms
 
 - **DeviceManifest**: top-level IPNS content
-- **Transaction**: signed change entry
+- **Mutation**: signed change entry
 - **DeviceRing**: user's linked devices
 - **PeerDirectory**: friends + shared groups

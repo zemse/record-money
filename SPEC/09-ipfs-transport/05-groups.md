@@ -36,7 +36,7 @@ Note: Symmetric key NOT included in link for security.
 4. **Inviter polls** recipient's feed, sees join request
 5. **Inviter approves** → adds recipient to group, shares symmetric key via encrypted PeerEntry
 6. **Recipient polls** inviter, receives key, can now decrypt group data
-7. **Recipient adds** self as member (create tx) and publishes own group manifest
+7. **Recipient adds** self as member (create mutation) and publishes own group manifest
 
 ### Rejecting invite
 
@@ -48,18 +48,18 @@ Member adds new device → updates selfDevices in PeerDirectory → others poll,
 
 ## Removing Members
 
-1. Create member removal tx
+1. Create member removal mutation
 2. Rotate group sym key
 3. Update PeerDirectory with new key for remaining members only
 4. Others see removal → stop polling removed member → get new key from PeerDirectory
 
 ### Key rotation race
 
-Device sees rotation tx but hasn't received new key yet → show UI error, retry, handle socially
+Device sees rotation mutation but hasn't received new key yet → show UI error, retry, handle socially
 
 ## Closing Group
 
-Create close tx → stop polling → keep data for reference → hide from active groups
+Create close mutation → stop polling → keep data for reference → hide from active groups
 
 ## Personal Group
 

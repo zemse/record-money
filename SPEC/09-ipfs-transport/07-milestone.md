@@ -2,7 +2,7 @@
 
 ## 8.1 Crypto Foundation
 - [ ] P-256 keygen, ECDH, AES-GCM helpers
-- [ ] Tx signing/verification
+- [ ] Mutation signing/verification
 - [ ] Canonical JSON
 
 ## 8.2 IPFS Integration
@@ -17,7 +17,7 @@
 
 ## 8.3 Data Structures
 - [ ] DeviceManifest, DeviceRing, PeerDirectory schemas
-- [ ] Transaction, GroupManifest schemas
+- [ ] Mutation, GroupManifest schemas
 - [ ] IndexedDB updates for sync metadata
 - [ ] Provider config storage
 
@@ -40,7 +40,7 @@
 - [ ] Page visibility detection (pause when hidden)
 - [ ] Rate limit backoff
 - [ ] Change detection
-- [ ] Tx fetch/verify/apply
+- [ ] Mutation fetch/verify/apply
 - [ ] Dedup by uuid
 - [ ] Sync state tracking
 
@@ -49,13 +49,13 @@
 - [ ] Binary conflict UI (2 devices)
 - [ ] Multi-device conflict UI (3+ devices, show all values)
 - [ ] Bulk scroll UI
-- [ ] Override tx creation
+- [ ] Override mutation creation
 
 ## 8.8 Publishing
-- [ ] Tx creation on local CRUD
-- [ ] ChangeLog management
+- [ ] Mutation creation on local CRUD
+- [ ] Mutations management
 - [ ] Manifest rebuild + publish
-- [ ] Full replication of imported txs
+- [ ] Full replication of imported mutations
 
 ## 8.9 Groups
 - [ ] Create group

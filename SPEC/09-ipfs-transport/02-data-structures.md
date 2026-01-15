@@ -6,12 +6,12 @@ All data on IPFS is public. Everything must be encrypted.
 
 ```typescript
 {
-  databaseCid: CID,                      // → encrypted full db
-  changeIdEncrypted: EncryptedValue,     // encrypted with device sym key
-  changeLogIndexEncrypted: EncryptedValue, // encrypted with device sym key
+  databaseCid: CID,                          // → encrypted full db
+  mutationIdEncrypted: EncryptedValue,       // encrypted with device sym key
+  mutationIndexEncrypted: EncryptedValue, // encrypted with device sym key
   // decrypts to: [{startId, endId, cid}]
-  deviceRingCid: CID,                    // → DeviceRing (individually encrypted)
-  peerDirectoryCid: CID                  // → PeerDirectory (individually encrypted)
+  deviceRingCid: CID,                        // → DeviceRing (individually encrypted)
+  peerDirectoryCid: CID                      // → PeerDirectory (individually encrypted)
 }
 ```
 
@@ -53,17 +53,17 @@ Note: DeviceRing is typically small (2-5 devices), so trying all entries is fast
 
 Randomized order to prevent analysis.
 
-## ChangeLogChunk
+## MutationChunk
 
 ```typescript
 // Entire chunk is encrypted with device sym key
 // Decrypts to:
 {
-  transactions: [{id, cid}]  // each cid → encrypted Transaction
+  mutations: [{id, cid}]  // each cid → encrypted Mutation
 }
 ```
 
-One chunk per ~100 txs. Chunk itself is encrypted to hide transaction IDs.
+One chunk per ~100 mutations. Chunk itself is encrypted to hide mutation IDs.
 
 ## GroupManifest
 
@@ -72,12 +72,12 @@ One chunk per ~100 txs. Chunk itself is encrypted to hide transaction IDs.
 // Decrypts to:
 {
   database: { records, members },
-  changeLogIndex: [{startId, endId, cid}],  // cids point to encrypted group ChangeLogChunks
-  currentChangeId
+  mutationIndex: [{startId, endId, cid}],  // cids point to encrypted group MutationChunks
+  currentMutationId
 }
 ```
 
-Group ChangeLogChunks are also encrypted with group sym key.
+Group MutationChunks are also encrypted with group sym key.
 
 ## GroupMember
 
@@ -98,7 +98,7 @@ Part of GroupManifest.database.members (encrypted within GroupManifest):
 | DeviceManifest fields | Device sym key |
 | DeviceRing entries | Device sym key (except symmetricKeyCiphertext which uses ECDH) |
 | PeerDirectory entries | ECDH per-friend |
-| ChangeLogChunk | Device sym key |
-| Transaction content | Device sym key |
+| MutationChunk | Device sym key |
+| Mutation content | Device sym key |
 | GroupManifest | Group sym key |
-| Group ChangeLogChunk | Group sym key |
+| Group MutationChunk | Group sym key |

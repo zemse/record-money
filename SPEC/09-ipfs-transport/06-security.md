@@ -6,7 +6,7 @@ High-trust (friends/family). Fork to exclude bad actors.
 
 ### Protected
 
-- Unauthorized writes → tx signatures
+- Unauthorized writes → mutation signatures
 - Tampering → signature verification  
 - Eavesdropping → symmetric encryption
 - Single device compromise → key rotation
@@ -19,14 +19,14 @@ High-trust (friends/family). Fork to exclude bad actors.
 
 ## Device Removal
 
-1. Create device removal tx
+1. Create device removal mutation
 2. Remove from DeviceRing
 3. Rotate device sym key
-4. Others see tx → stop polling removed device
+4. Others see mutation → stop polling removed device
 
 ## Group Member Removal
 
-1. Create member removal tx
+1. Create member removal mutation
 2. Rotate group sym key
 3. Distribute new key via PeerDirectory (remaining members only)
 4. Others stop polling removed member
@@ -42,7 +42,7 @@ Nuclear option: fork group without bad actor
 ## Spam
 
 No technical rate limit. If someone spams overrides:
-- Their txs are signed (identified)
+- Their mutations are signed (identified)
 - Show UI warning
 - Remove from group or fork
 
