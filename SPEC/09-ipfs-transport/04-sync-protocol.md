@@ -22,11 +22,16 @@ When user pairs their first device, existing solo data is automatically migrated
 // Migration pseudocode
 const mutations = [];
 
-// First, create self person
+// First, create self person (with device info)
 const selfPerson = {
   uuid: generateUUID(),
   name: currentUserName,
   email: currentUserEmail,
+  devices: [{
+    deviceId: hex(SHA256(authPublicKey)),
+    ipnsPublicKey: ipnsPublicKey,
+    authPublicKey: authPublicKey
+  }],
   isSelf: true,
   addedAt: Date.now()
 };
@@ -290,6 +295,30 @@ On local change:
 4. Upload to IPFS, update IPNS, unpin old
 
 NOT on import (avoid cascade).
+
+## Personal vs Group Mutations
+
+Two mutation streams with intentional redundancy:
+
+**Personal mutations (DeviceManifest.chunkIndex):**
+- Complete ledger for this user
+- Contains: Personal Ledger mutations + ALL group mutations (own + imported from other members)
+- Encrypted with Personal Key
+- Synced between self devices only
+
+**Group mutations (GroupManifest.chunkIndex):**
+- Subset for specific group only
+- Contains: Only mutations targeting this group's records/people
+- Encrypted with Group Key
+- Synced with group members
+
+**Redundancy:** When you make a group change, it goes to both:
+1. Your personal mutations (complete audit trail)
+2. That group's mutations (shared with members)
+
+When you import a group member's mutations, they go to:
+1. Your personal mutations (so you have the full ledger)
+2. Your copy of that group's mutations
 
 ## Republishing (Full Replication)
 
