@@ -121,7 +121,6 @@ When a placeholder person creates their own account:
 interface Group {
   uuid: string;
   name: string;
-  members: string[]; // person UUIDs
   createdAt: number;
   updatedAt: number;
 }
@@ -129,6 +128,7 @@ interface Group {
 
 - Default group (Personal Ledger) exists for ungrouped expenses
 - Each record belongs to one group (or default)
+- **Membership**: Determined by Person entries in `GroupManifest.database.people` (see IPFS transport spec), not stored redundantly in Group
 
 ---
 

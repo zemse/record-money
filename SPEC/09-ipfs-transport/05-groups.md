@@ -3,14 +3,29 @@
 ## Structure
 
 Each group has:
-- Symmetric key (shared among members)
+- Symmetric key (shared among members via PeerDirectory)
+- GroupManifest containing records and people (source of truth)
 - Each member publishes own group feed
 - All members poll all other members' feeds
+
+## Membership
+
+**Source of truth:** `GroupManifest.database.people`
+
+A person is a group member if:
+1. They have a Person entry in `database.people`
+2. Entry has `isPlaceholder: false` (or undefined) for active members
+3. Entry has `isPlaceholder: true` for invited-but-not-joined members
+
+**PeerDirectory vs GroupManifest:**
+- PeerDirectory = how you exchange symmetric keys (1-to-1 encrypted)
+- GroupManifest.database.people = who is in the group (source of truth)
+- PeerDirectory may lag behind or include pending invites
 
 ## Creating Group
 
 1. Generate group sym key
-2. Add self as first person
+2. Create Person mutation for self (first member)
 3. Publish group manifest
 
 ## Inviting People
@@ -85,14 +100,47 @@ Person adds new device → updates `selfDevices` in all PeerDirectory entries �
 
 ## Removing People
 
-1. Create person removal mutation
-2. Rotate group sym key
-3. Update PeerDirectory with new key for remaining people only
-4. Others see removal → stop polling removed person → get new key from PeerDirectory
+### Removal Flow
 
-### Key rotation race
+1. **Create person deletion mutation:**
+   ```typescript
+   {
+     targetType: 'person',
+     targetUuid: personToRemove.uuid,
+     operation: { type: 'delete' }
+   }
+   ```
 
-Device sees rotation mutation but hasn't received new key yet → show UI error, retry, handle socially
+2. **Generate new group symmetric key**
+
+3. **Update PeerDirectory:**
+   - Remove entry for removed person
+   - Update `sharedGroups` with new key for remaining members
+
+4. **Re-encrypt GroupManifest** with new key
+
+5. **Publish updated manifest**
+
+6. **Other members:**
+   - See deletion mutation
+   - Get new key from their PeerDirectory entry
+   - Stop polling removed person
+   - Re-encrypt their own group data with new key
+
+### Key Rotation Race
+
+Device sees deletion mutation but hasn't received new key via PeerDirectory yet:
+- Show UI: "Group key rotating, please wait..."
+- Retry fetching PeerDirectory
+- If still failing after retries: "Contact group admin to re-share key"
+- Handle socially (re-invite if needed)
+
+### Removed Person's View
+
+- Cannot decrypt new group data (wrong key)
+- UI shows: "You were removed from [Group Name]"
+- Local data preserved for reference
+- Can export their own records if needed
 
 ## Closing Group
 

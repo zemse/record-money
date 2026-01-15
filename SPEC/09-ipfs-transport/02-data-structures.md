@@ -40,6 +40,13 @@ Note: DeviceRing is typically small (2-5 devices), so trying all entries is fast
 
 ## PeerDirectory
 
+**Purpose:** Key exchange only. Not source of truth for group membership.
+
+Used to:
+- Share group symmetric keys with peers (encrypted per-peer)
+- Help peers discover my devices
+- Establish secure communication channels
+
 ```typescript
 {
   entries: [{
@@ -55,6 +62,8 @@ Note: DeviceRing is typically small (2-5 devices), so trying all entries is fast
 
 Randomized order to prevent analysis.
 
+**Note:** PeerDirectory entries may exist for peers not yet in a group (pending invites) or may lag behind actual group membership. GroupManifest.database.people is the source of truth for who is in a group.
+
 ## MutationChunk
 
 ```typescript
@@ -69,17 +78,27 @@ One chunk per ~100 mutations. Chunk itself is encrypted to hide mutation IDs.
 
 ## GroupManifest
 
+**Source of truth** for group data and membership.
+
 ```typescript
 // Entire manifest is encrypted with group sym key
 // Decrypts to:
 {
-  database: { records, people },
+  database: {
+    records: Record[],       // group expenses
+    people: Person[]         // SOURCE OF TRUTH for group membership
+  },
   mutationIndex: [{startId, endId, cid}],  // cids point to encrypted group MutationChunks
-  currentMutationId
+  currentMutationId: number
 }
 ```
 
 Group MutationChunks are also encrypted with group sym key.
+
+**Membership determination:**
+- A person is a member if they have an entry in `database.people`
+- Person entries are added/removed via mutations (`targetType: 'person'`)
+- `isPlaceholder: true` indicates pending member (invited but not yet joined with devices)
 
 ## Person
 
