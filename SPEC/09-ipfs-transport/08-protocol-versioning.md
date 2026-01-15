@@ -222,10 +222,28 @@ function isFeatureEnabled(feature: string, group: Group): boolean {
 | v2 | (reserved) |
 | v3 | (reserved) |
 
+## Downgrade
+
+If a user's client only supports a version lower than the group's current version, they can propose a downgrade.
+
+**Flow:**
+1. User proposes `maxSupportedVersion: 2` when group is at v3
+2. Other members see UI: "[User] needs v2 to participate. Accept downgrade?"
+3. Members who accept propose v2 (or lower)
+4. After 48h, group goes to `min(all proposals)`
+5. If min < current version → downgrade occurs
+
+**Downgrade consequences:**
+- Features requiring higher versions become disabled
+- Data created with higher-version features remains (just can't create new)
+- UI shows: "Group downgraded to v2. [Feature X] is now disabled."
+
+**Requiring consent:** Unlike upgrades where non-responders don't block, downgrades that would disable features should ideally have explicit acceptance from members who use those features. Implementation can show warnings but ultimately `min(proposals)` decides.
+
 ## Design Principles
 
 1. **No rejections** - system finds common ground automatically
 2. **No blocking** - old clients don't prevent upgrades, just limit how far
 3. **Simple** - one mutation type, no accept/reject coordination
-4. **Graceful** - upgrades to highest version everyone supports
+4. **Graceful** - upgrades/downgrades to version everyone supports
 5. **Full backward compatibility** - newer clients must support ALL older versions (v3 client handles v1, v2, v3 mutations)
