@@ -1,14 +1,16 @@
 # Milestone 8: P2P Sync
 
-~5-6 weeks total
-
 ## 8.1 Crypto Foundation
 - [ ] P-256 keygen, ECDH, AES-GCM helpers
 - [ ] Tx signing/verification
 - [ ] Canonical JSON
 
 ## 8.2 IPFS Integration
-- [ ] Piñata SDK
+- [ ] Pluggable pinning provider interface
+- [ ] Piñata provider implementation
+- [ ] Infura provider implementation (optional)
+- [ ] web3.storage provider implementation (optional)
+- [ ] Self-hosted IPFS provider implementation (optional)
 - [ ] Upload, fetch, IPNS resolve/update
 - [ ] Multi-gateway (highest seq)
 - [ ] Unpin old CIDs
@@ -17,22 +19,26 @@
 - [ ] DeviceManifest, DeviceRing, PeerDirectory schemas
 - [ ] Transaction, GroupManifest schemas
 - [ ] IndexedDB updates for sync metadata
+- [ ] Provider config storage
 
 ## 8.4 Device Setup
 - [ ] First-time setup UI
-- [ ] Piñata key input
+- [ ] Provider selection and config input
 - [ ] Key generation
 - [ ] Initial manifest publish
 
 ## 8.5 Device Pairing
-- [ ] QR gen/scan
+- [ ] QR gen/scan with provider config
 - [ ] Temp IPNS handshake
 - [ ] Emoji verification
 - [ ] DeviceRing update
-- [ ] Database import/merge
+- [ ] Fresh sync start (no data migration)
 
 ## 8.6 Sync Engine
-- [ ] Polling loop (15s adaptive)
+- [ ] Adaptive polling (15s foreground, 5min background)
+- [ ] Manual sync button
+- [ ] Page visibility detection (pause when hidden)
+- [ ] Rate limit backoff
 - [ ] Change detection
 - [ ] Tx fetch/verify/apply
 - [ ] Dedup by uuid
@@ -40,7 +46,8 @@
 
 ## 8.7 Conflict Resolution
 - [ ] Conflict detection
-- [ ] Side-by-side UI
+- [ ] Binary conflict UI (2 devices)
+- [ ] Multi-device conflict UI (3+ devices, show all values)
 - [ ] Bulk scroll UI
 - [ ] Override tx creation
 
@@ -48,32 +55,39 @@
 - [ ] Tx creation on local CRUD
 - [ ] ChangeLog management
 - [ ] Manifest rebuild + publish
-- [ ] Republishing imported txs
+- [ ] Full replication of imported txs
 
 ## 8.9 Groups
-- [ ] Create, invite (PeerDirectory + link)
+- [ ] Create group
+- [ ] Invite existing friend (PeerDirectory)
+- [ ] Invite link generation (without symmetric key)
+- [ ] Join request flow
+- [ ] Invite approval UI
 - [ ] Group sync
 - [ ] Member add/remove
-- [ ] Key rotation
+- [ ] Key rotation (event-based only)
 - [ ] Close group
 
 ## 8.10 Security
-- [ ] Device removal
-- [ ] Key rotation flows
+- [ ] Device removal + key rotation
+- [ ] Event-based key rotation (no time-based)
 - [ ] Malformed content handling
 - [ ] Fork group flow
 
 ## 8.11 UI
-- [ ] Sync status indicator
+- [ ] Sync status indicator with manual sync button
 - [ ] Device management
 - [ ] Pairing flow
 - [ ] Group members
+- [ ] Pending invite approvals
 - [ ] Conflict notifications
 
 ## 8.12 Testing
 - [ ] Multi-device sync
 - [ ] Multi-user groups
-- [ ] Conflicts, removal, rotation
+- [ ] Conflicts (binary and multi-device)
+- [ ] Device/member removal and key rotation
 - [ ] Offline/online transitions
+- [ ] Adaptive polling behavior
 
 **Review gate after each section**

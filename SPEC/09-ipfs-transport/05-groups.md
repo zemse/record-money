@@ -23,17 +23,24 @@ Add group to PeerEntry for that friend. Friend discovers by polling your PeerDir
 ### New person (invite link)
 
 ```
-Link contains: groupId, groupName, symmetricKey, inviterIpns, inviterAuth
+Link contains: groupId, groupName, inviterIpns, inviterAuth
 ```
 
-Anyone with link gets read access. Acceptable risk.
+Note: Symmetric key NOT included in link for security.
 
-### Accepting invite
+### Invite link flow (manual approval)
 
-1. Store group + sym key
-2. Poll inviter to get full group data
-3. Add self as member (create tx)
-4. Publish own group manifest
+1. **Inviter generates link** (no symmetric key in link)
+2. **Recipient clicks link** → creates join request
+3. **Recipient publishes** join request to their IPNS feed
+4. **Inviter polls** recipient's feed, sees join request
+5. **Inviter approves** → adds recipient to group, shares symmetric key via encrypted PeerEntry
+6. **Recipient polls** inviter, receives key, can now decrypt group data
+7. **Recipient adds** self as member (create tx) and publishes own group manifest
+
+### Rejecting invite
+
+Inviter simply does not approve. Join request expires/is ignored.
 
 ## Device Discovery in Groups
 

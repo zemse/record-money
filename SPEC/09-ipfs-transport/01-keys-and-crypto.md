@@ -17,8 +17,32 @@ Device A shares sym key with Device B:
 
 ## Rotation
 
-- Device sym key: rotate every 24h or on device removal
-- Group sym key: rotate on member removal
+Event-based only (no time-based rotation to support offline devices):
+- Device sym key: rotate on device removal only
+- Group sym key: rotate on member removal only
+
+## Pinning Provider
+
+Abstract pinning service to allow multiple providers.
+
+```typescript
+interface PinningProvider {
+  name: string;
+  upload(data: Uint8Array): Promise<CID>;
+  pin(cid: CID): Promise<void>;
+  unpin(cid: CID): Promise<void>;
+  resolveIpns(key: string): Promise<CID>;
+  publishIpns(key: Ed25519PrivateKey, cid: CID): Promise<void>;
+}
+```
+
+Supported providers:
+- Piñata (default)
+- Infura
+- web3.storage
+- Self-hosted IPFS node
+
+Provider config stored in device settings.
 
 ## Transaction Signing
 

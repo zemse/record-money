@@ -2,7 +2,7 @@
 
 ## Prerequisite
 
-At least one device must have Piñata API key.
+At least one device must have a pinning provider configured (Piñata, Infura, web3.storage, or self-hosted).
 
 ## QR Payload (Device A generates)
 
@@ -11,14 +11,23 @@ At least one device must have Piñata API key.
   ipnsPublicKey,
   authPublicKey,
   tempIpnsPrivateKey,    // for B to respond
-  pinataApiKey?          // only if B is fresh
+  providerConfig?        // only if B is fresh, contains provider credentials
 }
+```
+
+Provider config structure depends on provider type:
+```typescript
+type ProviderConfig =
+  | { type: 'pinata', apiKey: string, secretKey?: string }
+  | { type: 'infura', projectId: string, projectSecret: string }
+  | { type: 'web3storage', token: string }
+  | { type: 'self-hosted', endpoint: string, authToken?: string }
 ```
 
 ## Flow
 
-1. **A generates QR**, optionally includes Piñata key
-2. **B scans**, validates, if fresh needs Piñata key in payload
+1. **A generates QR**, optionally includes provider config
+2. **B scans**, validates, if fresh needs provider config in payload
 3. **B publishes** own DeviceManifest, adds A to DeviceRing with encrypted sym key
 4. **B publishes response** to temp IPNS: `{ipnsPubKey, authPubKey}`
 5. **B shows 4 emojis** (hash of response)
