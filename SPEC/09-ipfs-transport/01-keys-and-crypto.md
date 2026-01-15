@@ -183,27 +183,27 @@ interface ScalarChange {
   new: any;
 }
 
-// Array operations for paidBy/paidFor (keyed by personUuid)
+// Array operations (keyed by identifier)
 interface ArrayAddOp {
-  field: 'paidBy' | 'paidFor';
+  field: 'paidBy' | 'paidFor' | 'devices';
   op: 'add';
-  key: string;              // personUuid
-  value: Participant;
+  key: string;              // personUuid for paidBy/paidFor, deviceId for devices
+  value: Participant | DeviceInfo;
 }
 
 interface ArrayRemoveOp {
-  field: 'paidBy' | 'paidFor';
+  field: 'paidBy' | 'paidFor' | 'devices';
   op: 'remove';
-  key: string;              // personUuid
-  oldValue: Participant;
+  key: string;              // personUuid for paidBy/paidFor, deviceId for devices
+  oldValue: Participant | DeviceInfo;
 }
 
 interface ArrayUpdateOp {
-  field: 'paidBy' | 'paidFor';
+  field: 'paidBy' | 'paidFor' | 'devices';
   op: 'update';
-  key: string;              // personUuid
-  old: Participant;
-  new: Participant;
+  key: string;              // personUuid for paidBy/paidFor, deviceId for devices
+  old: Participant | DeviceInfo;
+  new: Participant | DeviceInfo;
 }
 ```
 

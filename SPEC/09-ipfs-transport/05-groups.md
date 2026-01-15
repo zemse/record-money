@@ -24,9 +24,43 @@ A person is a group member if:
 
 ## Creating Group
 
-1. Generate Group Key
-2. Create Person mutation for self (first member)
-3. Publish group manifest
+1. **Generate group UUID** (UUIDv4)
+2. **Generate Group Key** (random 256-bit)
+3. **Create group mutation:**
+   ```typescript
+   {
+     targetType: 'group',
+     targetUuid: groupUuid,
+     operation: {
+       type: 'create',
+       data: {
+         uuid: groupUuid,
+         name: "Group Name",
+         createdAt: Date.now(),
+         createdBy: selfPersonUuid
+       }
+     }
+   }
+   ```
+4. **Create person mutation** to add self as first member:
+   ```typescript
+   {
+     targetType: 'person',
+     targetUuid: selfPersonUuid,
+     operation: {
+       type: 'create',
+       data: {
+         uuid: selfPersonUuid,
+         name: "My Name",
+         devices: [{ deviceId, ipnsPublicKey, authPublicKey }],
+         isSelf: true,
+         addedAt: Date.now()
+       }
+     }
+   }
+   ```
+5. **Publish GroupManifest** encrypted with Group Key
+6. **Add group to own PeerDirectory** `sharedGroups` (for other self devices)
 
 ## Inviting People
 

@@ -111,6 +111,7 @@ One chunk per ~100 mutations. Chunk itself is encrypted to hide mutation IDs.
 // Entire manifest is encrypted with Group Key
 // Decrypts to:
 {
+  group: Group,              // group metadata (uuid, name, createdAt, createdBy)
   database: {
     records: Record[],       // group expenses (merged from all members)
     people: Person[]         // SOURCE OF TRUTH for group membership
@@ -131,6 +132,19 @@ Group MutationChunks are also encrypted with Group Key.
 - A person is a member if they have an entry in `database.people`
 - Person entries are added/removed via mutations (`targetType: 'person'`)
 - `isPlaceholder: true` indicates pending member (invited but not yet joined with devices)
+
+## Group
+
+Group metadata stored in GroupManifest:
+
+```typescript
+interface Group {
+  uuid: string;             // group identifier
+  name: string;
+  createdAt: number;        // Unix ms
+  createdBy: string;        // UUID of person who created the group
+}
+```
 
 ## Person
 
