@@ -16,6 +16,150 @@ High-trust (family/friends). Fork to exclude bad actors.
 - Compromised group person → fork to exclude
 - Metadata analysis → partial (randomized order)
 
+## Device Removal
+
+When a device needs to be removed (lost, stolen, or decommissioned).
+
+### Removal Mutation
+
+```typescript
+{
+  targetType: 'device',
+  targetUuid: deviceId,  // SHA-256(authPublicKey) of device to remove
+  operation: { type: 'delete' }
+}
+```
+
+### Full Removal Flow
+
+**Step 1: Create removal mutation**
+```typescript
+const deviceToRemove = "abc123...";  // deviceId to remove
+const mutation = {
+  uuid: generateUUID(),
+  id: nextMutationId++,
+  targetUuid: deviceToRemove,
+  targetType: 'device',
+  operation: { type: 'delete' },
+  timestamp: Date.now(),
+  authorDevicePublicKey: myAuthPublicKey
+};
+sign(mutation);
+```
+
+**Step 2: Generate new symmetric key**
+```typescript
+const newSymmetricKey = crypto.getRandomValues(new Uint8Array(32));
+```
+
+**Step 3: Update DeviceRing**
+- Remove the deleted device's entry
+- Re-encrypt `symmetricKeyCiphertext` for each remaining device using new key:
+```typescript
+for (const device of remainingDevices) {
+  const sharedSecret = ECDH(myPrivateKey, device.authPublicKey);
+  const aesKey = HKDF(sharedSecret, "recordmoney-key-share");
+  device.symmetricKeyCiphertext = AES_GCM_Encrypt(aesKey, newSymmetricKey);
+}
+```
+
+**Step 4: Re-encrypt all data with new key**
+- Database snapshot
+- Mutation index
+- All mutation chunks
+
+```typescript
+const newDatabaseCid = await upload(encrypt(database, newSymmetricKey));
+const newMutationChunks = await reencryptChunks(mutations, newSymmetricKey);
+const newMutationIndex = buildIndex(newMutationChunks);
+```
+
+**Step 5: Publish updated manifest**
+```typescript
+const manifest = {
+  databaseCid: newDatabaseCid,
+  mutationIdEncrypted: encrypt(currentMutationId, newSymmetricKey),
+  mutationIndexEncrypted: encrypt(newMutationIndex, newSymmetricKey),
+  deviceRingCid: newDeviceRingCid,
+  peerDirectoryCid: peerDirectoryCid  // unchanged
+};
+await publishIpns(ipnsPrivateKey, manifest);
+```
+
+**Step 6: Unpin old content**
+```typescript
+await provider.unpin(oldDatabaseCid);
+await provider.unpin(oldDeviceRingCid);
+for (const chunk of oldMutationChunks) {
+  await provider.unpin(chunk.cid);
+}
+```
+
+### Propagation to Other Devices
+
+When Device B sees a device removal mutation from Device A:
+
+1. **Verify mutation** - check signature, ensure author is in DeviceRing
+2. **Stop polling removed device** - remove from sync targets
+3. **Perform own key rotation** - same steps 2-6 above
+4. **Continue syncing** - poll remaining devices normally
+
+```typescript
+// On receiving device removal mutation
+if (mutation.targetType === 'device' && mutation.operation.type === 'delete') {
+  const removedDeviceId = mutation.targetUuid;
+
+  // Verify author has permission (is in our DeviceRing)
+  if (!isKnownDevice(mutation.authorDevicePublicKey)) {
+    reject("Unknown author");
+    return;
+  }
+
+  // Remove from our DeviceRing and rotate keys
+  await removeDeviceAndRotateKeys(removedDeviceId);
+
+  // Stop polling the removed device
+  syncTargets.delete(removedDeviceId);
+}
+```
+
+### Security Considerations
+
+**What's protected:**
+- Removed device cannot decrypt any NEW data (new symmetric key)
+- Removed device cannot create valid mutations (signature rejected by others)
+
+**What's NOT protected:**
+- Removed device may have local copy of OLD data (already decrypted)
+- Old IPFS content may be cached on gateways (eventually expires)
+- Removed device could still publish to its own IPNS (but others stop polling)
+
+**Mitigation for old data:**
+- Unpinning removes from pinning provider
+- Gateway caches expire (typically 24-48 hours)
+- Cannot revoke data already on removed device's local storage
+
+### Edge Cases
+
+**Simultaneous removal:** Two devices try to remove each other
+- Both mutations are valid if both authors were in DeviceRing at time of signing
+- Result: both devices removed, remaining devices continue
+
+**Self-removal:** Device removes itself
+- Valid operation (e.g., user wiping device before selling)
+- Other devices see mutation, perform key rotation
+- Self-removed device stops syncing
+
+**Last device removal:** Removing the only remaining device
+- Should be prevented in UI ("Cannot remove last device")
+- Would result in no devices able to decrypt data
+
+**Offline device during removal:**
+- Offline device misses the removal mutation
+- When it comes online, it can't decrypt new data (wrong key)
+- UI shows "Sync failed - you may have been removed"
+- User can re-pair if removal was accidental
+
 ## Malicious Actor
 
 Detection: invalid sig, unknown author, malformed content, bad timestamp

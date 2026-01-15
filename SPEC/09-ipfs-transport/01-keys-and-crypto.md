@@ -59,16 +59,26 @@ Supported providers:
 
 Provider config stored in device settings.
 
+## Device Identifier
+
+Devices are identified by a hash of their auth public key:
+
+```typescript
+deviceId = hex(SHA-256(authPublicKey))  // 64-character hex string
+```
+
+This provides a stable, unique identifier derived from the device's signing key.
+
 ## Mutation Structure
 
-Mutations track all changes to records, persons, and groups using field-level granularity.
+Mutations track all changes to records, persons, groups, and devices using field-level granularity.
 
 ```typescript
 interface Mutation {
   uuid: string;                    // UUIDv4 - mutation identifier
   id: number;                      // per-device incremental
-  targetUuid: string;              // UUID of record/person/group being modified
-  targetType: 'record' | 'person' | 'group';
+  targetUuid: string;              // UUID or deviceId of target
+  targetType: 'record' | 'person' | 'group' | 'device';
   operation: MutationOperation;
   timestamp: number;               // Unix ms
   authorDevicePublicKey: Uint8Array;  // 65-byte uncompressed P-256 public key
@@ -82,11 +92,12 @@ type MutationOperation =
 
 interface CreateOp {
   type: 'create';
-  data: Record | Person | Group;   // full object for creation
+  data: Record | Person | Group;   // full object for creation (not used for device)
 }
 
 interface DeleteOp {
   type: 'delete';
+  // For device deletion, triggers key rotation
 }
 
 interface UpdateOp {
