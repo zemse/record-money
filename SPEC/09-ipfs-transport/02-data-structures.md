@@ -4,57 +4,78 @@ All data on IPFS is public. Everything must be encrypted.
 
 **Database vs Mutations:** Database is current state. Mutations are ordered updates. Applying all mutations from start produces the same state (intentional redundancy for sync reliability).
 
+## Encryption Keys
+
+Two symmetric keys with different access levels:
+
+| Key | Shared With | Purpose |
+|-----|-------------|---------|
+| **Personal Key** | Self devices only | Encrypt personal database, mutations |
+| **Broadcast Key** | Self devices + peers | Encrypt device ring (for peer discovery) |
+
+Keys are distributed via PeerDirectory (ECDH encrypted per-recipient).
+
 ## DeviceManifest (IPNS root)
 
 ```typescript
 {
-  databaseCid: CID,                          // → encrypted full db
-  mutationIdEncrypted: EncryptedValue,       // encrypted with device sym key
-  mutationIndexEncrypted: EncryptedValue, // encrypted with device sym key
+  // Encrypted with Personal Key (self devices only)
+  databaseCid: CID,                        // → encrypted full db (personal + group data)
+  mutationIdEncrypted: EncryptedValue,     // encrypted with Personal Key
+  mutationIndexEncrypted: EncryptedValue,  // encrypted with Personal Key
   // decrypts to: [{startId, endId, cid}]
-  deviceRingCid: CID,                        // → DeviceRing (individually encrypted)
-  peerDirectoryCid: CID                      // → PeerDirectory (individually encrypted)
+
+  // Encrypted with Broadcast Key (self devices + peers)
+  deviceRingCid: CID,                      // → DeviceRing
+
+  // ECDH encrypted per-entry
+  peerDirectoryCid: CID                    // → PeerDirectory
 }
 ```
 
 ## DeviceRing
 
+Encrypted entirely with Broadcast Key. Peers can decrypt to discover devices to poll.
+
 ```typescript
+// Entire structure encrypted with Broadcast Key
+// Decrypts to:
 {
   devices: [{
-    authPublicKeyEncrypted,     // encrypted with device sym key
-    ipnsPublicKeyEncrypted,     // encrypted with device sym key
-    symmetricKeyCiphertext,     // encrypted with ECDH shared secret (NOT sym key)
-    lastSyncedIdEncrypted       // encrypted with device sym key
+    authPublicKey: Uint8Array,   // 65-byte uncompressed P-256 public key
+    ipnsPublicKey: Uint8Array,   // 32-byte Ed25519 public key
+    lastSyncedId: number         // last mutation ID synced from this device
   }]
 }
 ```
 
-**How new device B gets symmetric key:**
-1. B iterates through all entries in A's DeviceRing
-2. For each entry, B tries: `ECDH(B.private, A.public)` → decrypt `symmetricKeyCiphertext`
-3. One will succeed (the entry A created for B)
-4. B now has symmetric key and can decrypt other fields
-
-Note: DeviceRing is typically small (2-5 devices), so trying all entries is fast.
+**How it works:**
+1. Self devices get Broadcast Key from PeerDirectory (via ECDH)
+2. Peers also get Broadcast Key from PeerDirectory (via ECDH)
+3. Anyone with Broadcast Key can decrypt DeviceRing and see all devices
+4. Peers use this to discover which IPNS feeds to poll
 
 ## PeerDirectory
 
-**Purpose:** Key exchange only. Not source of truth for group membership.
+**Purpose:** Key distribution and group sharing. Not source of truth for group membership.
 
 Used to:
-- Share group symmetric keys with peers (encrypted per-peer)
-- Help peers discover my devices
-- Establish secure communication channels
+- Distribute Personal Key and Broadcast Key to self devices
+- Distribute Broadcast Key to peers (for device discovery)
+- Share Group Keys and manifest locations
 
 ```typescript
 {
   entries: [{
-    ciphertext  // ECDH encrypted per-person, contains:
+    ciphertext  // ECDH encrypted per-recipient, contains:
     // {
-    //   peerDevices: [{authPubKey, ipnsPubKey}],
-    //   selfDevices: [{authPubKey, ipnsPubKey}],  // for peer to discover my devices
-    //   sharedGroups: [{groupId, symmetricKey}]
+    //   personalKey?: Uint8Array,   // 32-byte Personal Key (only for self devices)
+    //   broadcastKey: Uint8Array,   // 32-byte Broadcast Key (for self devices and peers)
+    //   sharedGroups: [{
+    //     groupUuid: string,        // group identifier
+    //     symmetricKey: Uint8Array, // 32-byte Group Key
+    //     manifestCid: CID          // points to my GroupManifest for this group
+    //   }]
     // }
   }]
 }
@@ -62,12 +83,16 @@ Used to:
 
 Randomized order to prevent analysis.
 
+**Entry types:**
+- **Self device entry:** Contains `personalKey` + `broadcastKey` + `sharedGroups`
+- **Peer entry:** Contains `broadcastKey` + `sharedGroups` (no `personalKey`)
+
 **Note:** PeerDirectory entries may exist for peers not yet in a group (pending invites) or may lag behind actual group membership. GroupManifest.database.people is the source of truth for who is in a group.
 
 ## MutationChunk
 
 ```typescript
-// Entire chunk is encrypted with device sym key
+// Entire chunk is encrypted with Personal Key
 // Decrypts to:
 {
   mutations: [{id, cid}]  // each cid → encrypted Mutation
@@ -81,7 +106,7 @@ One chunk per ~100 mutations. Chunk itself is encrypted to hide mutation IDs.
 **Source of truth** for group data and membership.
 
 ```typescript
-// Entire manifest is encrypted with group sym key
+// Entire manifest is encrypted with Group Key
 // Decrypts to:
 {
   database: {
@@ -93,7 +118,7 @@ One chunk per ~100 mutations. Chunk itself is encrypted to hide mutation IDs.
 }
 ```
 
-Group MutationChunks are also encrypted with group sym key.
+Group MutationChunks are also encrypted with Group Key.
 
 **Membership determination:**
 - A person is a member if they have an entry in `database.people`
@@ -123,12 +148,13 @@ Part of database (personal or group, encrypted):
 
 ## Encryption Summary
 
-| Structure | Encryption |
-|-----------|------------|
-| DeviceManifest fields | Device sym key |
-| DeviceRing entries | Device sym key (except symmetricKeyCiphertext which uses ECDH) |
-| PeerDirectory entries | ECDH per-friend |
-| MutationChunk | Device sym key |
-| Mutation content | Device sym key |
-| GroupManifest | Group sym key |
-| Group MutationChunk | Group sym key |
+| Structure | Encryption | Who Can Decrypt |
+|-----------|------------|-----------------|
+| Database (databaseCid) | Personal Key | Self devices only |
+| Mutation ID & Index | Personal Key | Self devices only |
+| MutationChunk | Personal Key | Self devices only |
+| Mutation content | Personal Key | Self devices only |
+| DeviceRing | Broadcast Key | Self devices + Peers |
+| PeerDirectory entries | ECDH per-recipient | Individual recipient |
+| GroupManifest | Group Key | Group members |
+| Group MutationChunk | Group Key | Group members |

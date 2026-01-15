@@ -12,29 +12,72 @@
 | IPNS keys | Ed25519 | Required by IPFS/IPNS |
 | UUID | UUIDv4 | Mutation and record identifiers |
 
-## Per-Device Keys
+## Key Summary
 
-| Key | Purpose |
-|-----|---------|
-| Signing keypair (P-256) | Sign mutations |
-| IPNS keypair (Ed25519) | Publish to own feed |
-| Symmetric key (256-bit) | Encrypt device content |
+### Device Keys (unique per device)
 
-## Key Sharing
+| Key | Type | Purpose | Storage |
+|-----|------|---------|---------|
+| **Signing Keypair** | ECDSA P-256 | Sign mutations | Device local storage |
+| **IPNS Keypair** | Ed25519 | Publish to device's IPNS feed | Device local storage |
 
-Device A shares sym key with Device B:
+Each device generates its own keypairs on first launch. Private keys never leave the device.
+
+### User Keys (shared across user's devices)
+
+| Key | Type | Shared With | Purpose |
+|-----|------|-------------|---------|
+| **Personal Key** | AES-256 | Self devices only | Encrypt database, mutations |
+| **Broadcast Key** | AES-256 | Self devices + peers | Encrypt DeviceRing (for discovery) |
+
+First device generates both keys. Additional devices receive them via PeerDirectory (ECDH encrypted).
+
+### Group Keys (shared across group members)
+
+| Key | Type | Shared With | Purpose |
+|-----|------|-------------|---------|
+| **Group Key** | AES-256 | All group members | Encrypt GroupManifest, group mutations |
+
+Group creator generates the key. Members receive it via PeerDirectory `sharedGroups` entries.
+
+### Temporary Keys (single-use, discarded after)
+
+| Key | Type | Purpose |
+|-----|------|---------|
+| **Temp IPNS Keypair** | Ed25519 | Response channel for device pairing / group invite |
+| **Temp Symmetric Key** | AES-256 | Encrypt invite link response |
+
+Generated for pairing/invite flows, discarded after use.
+
+### Key Count Example
+
+User with 2 devices in 3 groups:
+- 4 keypairs (2 per device: signing + IPNS)
+- 2 user keys (Personal + Broadcast)
+- 3 group keys
+- **Total: 9 persistent keys**
+
+## Key Distribution
+
+Keys are shared via PeerDirectory entries (ECDH encrypted per-recipient):
+
 1. `sharedSecret = ECDH(A.private, B.public)` → 256-bit raw shared secret
 2. `aesKey = HKDF-SHA256(sharedSecret, salt="recordmoney-key-share", info="")` → 256-bit AES key
-3. `ciphertext = AES-256-GCM(aesKey, iv=random96bit, plaintext=symKey)`
-4. Publish ciphertext in DeviceRing
+3. `ciphertext = AES-256-GCM(aesKey, iv=random96bit, plaintext={personalKey?, broadcastKey, sharedGroups})`
+4. Publish ciphertext in PeerDirectory
+
+**Entry contents:**
+- Self device entry: `personalKey` + `broadcastKey` + `sharedGroups`
+- Peer entry: `broadcastKey` + `sharedGroups` (no `personalKey`)
 
 Decryption with wrong key → AES-GCM auth tag fails → throws error (not garbage)
 
 ## Rotation
 
 Event-based only (no time-based rotation to support offline devices):
-- Device sym key: rotate on device removal only
-- Group sym key: rotate on member removal only
+- **Personal Key:** Rotate on device removal only
+- **Broadcast Key:** Rotate on device removal OR peer removal
+- **Group Key:** Rotate on member removal only
 
 ## Pinning Provider
 

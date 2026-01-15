@@ -47,49 +47,73 @@ const mutation = {
 sign(mutation);
 ```
 
-**Step 2: Generate new symmetric key**
+**Step 2: Generate new keys**
 ```typescript
-const newSymmetricKey = crypto.getRandomValues(new Uint8Array(32));
+const newPersonalKey = crypto.getRandomValues(new Uint8Array(32));
+const newBroadcastKey = crypto.getRandomValues(new Uint8Array(32));
 ```
 
 **Step 3: Update DeviceRing**
 - Remove the deleted device's entry
-- Re-encrypt `symmetricKeyCiphertext` for each remaining device using new key:
+- Re-encrypt entire DeviceRing with new Broadcast Key:
+```typescript
+const deviceRing = {
+  devices: remainingDevices.map(d => ({
+    authPublicKey: d.authPublicKey,
+    ipnsPublicKey: d.ipnsPublicKey,
+    lastSyncedId: d.lastSyncedId
+  }))
+};
+const newDeviceRingCid = await upload(encrypt(deviceRing, newBroadcastKey));
+```
+
+**Step 4: Update PeerDirectory**
+- Remove entry for deleted device
+- Re-encrypt entries for remaining self devices with new Personal Key + Broadcast Key:
 ```typescript
 for (const device of remainingDevices) {
   const sharedSecret = ECDH(myPrivateKey, device.authPublicKey);
   const aesKey = HKDF(sharedSecret, "recordmoney-key-share");
-  device.symmetricKeyCiphertext = AES_GCM_Encrypt(aesKey, newSymmetricKey);
+  device.ciphertext = AES_GCM_Encrypt(aesKey, { personalKey: newPersonalKey, broadcastKey: newBroadcastKey, sharedGroups });
+}
+```
+- Re-encrypt entries for peers with new Broadcast Key only:
+```typescript
+for (const peer of peers) {
+  const sharedSecret = ECDH(myPrivateKey, peer.authPublicKey);
+  const aesKey = HKDF(sharedSecret, "recordmoney-key-share");
+  peer.ciphertext = AES_GCM_Encrypt(aesKey, { broadcastKey: newBroadcastKey, sharedGroups });
 }
 ```
 
-**Step 4: Re-encrypt all data with new key**
+**Step 5: Re-encrypt all data with new Personal Key**
 - Database snapshot
 - Mutation index
 - All mutation chunks
 
 ```typescript
-const newDatabaseCid = await upload(encrypt(database, newSymmetricKey));
-const newMutationChunks = await reencryptChunks(mutations, newSymmetricKey);
+const newDatabaseCid = await upload(encrypt(database, newPersonalKey));
+const newMutationChunks = await reencryptChunks(mutations, newPersonalKey);
 const newMutationIndex = buildIndex(newMutationChunks);
 ```
 
-**Step 5: Publish updated manifest**
+**Step 6: Publish updated manifest**
 ```typescript
 const manifest = {
   databaseCid: newDatabaseCid,
-  mutationIdEncrypted: encrypt(currentMutationId, newSymmetricKey),
-  mutationIndexEncrypted: encrypt(newMutationIndex, newSymmetricKey),
-  deviceRingCid: newDeviceRingCid,
-  peerDirectoryCid: peerDirectoryCid  // unchanged
+  mutationIdEncrypted: encrypt(currentMutationId, newPersonalKey),
+  mutationIndexEncrypted: encrypt(newMutationIndex, newPersonalKey),
+  deviceRingCid: newDeviceRingCid,  // encrypted with new Broadcast Key
+  peerDirectoryCid: newPeerDirectoryCid
 };
 await publishIpns(ipnsPrivateKey, manifest);
 ```
 
-**Step 6: Unpin old content**
+**Step 7: Unpin old content**
 ```typescript
 await provider.unpin(oldDatabaseCid);
 await provider.unpin(oldDeviceRingCid);
+await provider.unpin(oldPeerDirectoryCid);
 for (const chunk of oldMutationChunks) {
   await provider.unpin(chunk.cid);
 }

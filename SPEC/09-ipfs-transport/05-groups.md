@@ -24,7 +24,7 @@ A person is a group member if:
 
 ## Creating Group
 
-1. Generate group sym key
+1. Generate Group Key
 2. Create Person mutation for self (first member)
 3. Publish group manifest
 
@@ -67,9 +67,9 @@ Note: Group symmetric key NOT included in link for security.
 6. **Inviter decrypts** with temp sym key, gets recipient's device keys
 7. **Inviter verifies emojis** match with recipient (prevents MITM)
 8. **Both become peers**:
-   - Inviter adds recipient to PeerDirectory (with group sym key in entry)
+   - Inviter adds recipient to PeerDirectory (with Group Key in entry)
    - Recipient adds inviter to PeerDirectory
-9. **Recipient polls inviter's PeerDirectory**, finds self, gets group sym key
+9. **Recipient polls inviter's PeerDirectory**, finds self, gets Group Key
 10. **Recipient joins group**: creates person mutation, publishes own group manifest
 11. **Other people discover new person** via group → add to their PeerDirectory
 12. **New person discovers other people** via group → adds them to PeerDirectory
@@ -111,7 +111,7 @@ Person adds new device → updates `selfDevices` in all PeerDirectory entries �
    }
    ```
 
-2. **Generate new group symmetric key**
+2. **Generate new Group Key**
 
 3. **Update PeerDirectory:**
    - Remove entry for removed person
