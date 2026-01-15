@@ -120,6 +120,7 @@ Mutations track all changes to records, persons, groups, and devices using field
 
 ```typescript
 interface Mutation {
+  version: number;                 // protocol version (1, 2, 3, ...)
   uuid: string;                    // UUIDv4 - mutation identifier
   id: number;                      // per-device incremental
   targetUuid: string;              // UUID or deviceId of target
@@ -137,7 +138,8 @@ type MutationOperation =
   | UpdateOp
   | MergeOp
   | ExitOp
-  | ResolveConflictOp;
+  | ResolveConflictOp
+  | ProposeUpgradeOp;
 
 interface CreateOp {
   type: 'create';
@@ -176,6 +178,14 @@ interface ResolveConflictOp {
   targetUuid: string;              // record/person involved (for context)
   summary?: string;                // human-readable description
   // See 04-sync-protocol.md for full conflict resolution spec
+}
+
+interface ProposeUpgradeOp {
+  type: 'propose_upgrade';
+  maxSupportedVersion: number;     // highest version this client supports
+  // Only valid for targetType: 'group'
+  // System upgrades to min(all proposals) after 48 hours
+  // See 08-protocol-versioning.md for upgrade flow
 }
 ```
 

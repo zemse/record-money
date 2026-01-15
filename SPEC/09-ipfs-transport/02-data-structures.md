@@ -145,8 +145,19 @@ interface Group {
   name: string;
   createdAt: number;        // Unix ms
   createdBy: string;        // UUID of person who created the group
+  protocolVersion: number;  // current active protocol version (starts at 1)
+  pendingUpgrade?: {
+    windowStart: number;    // Unix ms - when first proposal was received
+    windowEnd: number;      // windowStart + 48 hours
+    proposals: [{
+      personUuid: string;   // who proposed
+      maxSupportedVersion: number;
+    }];
+  };
 }
 ```
+
+**Protocol versioning:** Upgrade activates to `min(all maxSupportedVersion)` after 48-hour window. See `08-protocol-versioning.md` for details.
 
 ## Person
 
