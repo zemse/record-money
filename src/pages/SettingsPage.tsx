@@ -722,11 +722,24 @@ export function SettingsPage() {
                       key={group.records.map((r) => r.uuid).join('-')}
                       className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/30 dark:bg-amber-500/10"
                     >
-                      <div className="mb-3 flex items-center justify-between">
-                        <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
-                          Group {groupIndex + 1} • {group.records.length} records •{' '}
-                          {Math.round(group.avgSimilarity * 100)}% similar
-                        </span>
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                            Group {groupIndex + 1} • {group.records.length} records
+                          </span>
+                          {/* Color-coded similarity badge */}
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                              group.avgSimilarity >= 0.9
+                                ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400'
+                                : group.avgSimilarity >= 0.7
+                                  ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400'
+                                  : 'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400'
+                            }`}
+                          >
+                            {Math.round(group.avgSimilarity * 100)}% match
+                          </span>
+                        </div>
                         <div className="flex items-center gap-2">
                           <span className="text-xs text-amber-600/70 dark:text-amber-400/70">
                             {group.reasons.join(' • ')}

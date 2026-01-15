@@ -1,5 +1,44 @@
 import type { ExpenseRecord } from '../types'
 
+// Levenshtein distance for string similarity
+function levenshteinDistance(s1: string, s2: string): number {
+  const m = s1.length
+  const n = s2.length
+
+  if (m === 0) return n
+  if (n === 0) return m
+
+  // Use single array optimization
+  const prev = Array.from({ length: n + 1 }, (_, i) => i)
+  const curr = new Array(n + 1)
+
+  for (let i = 1; i <= m; i++) {
+    curr[0] = i
+    for (let j = 1; j <= n; j++) {
+      const cost = s1[i - 1] === s2[j - 1] ? 0 : 1
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost)
+    }
+    for (let j = 0; j <= n; j++) {
+      prev[j] = curr[j]
+    }
+  }
+
+  return prev[n]
+}
+
+// Calculate string similarity (0-1, where 1 is identical)
+function stringSimilarity(s1: string, s2: string): number {
+  const str1 = s1.toLowerCase().trim()
+  const str2 = s2.toLowerCase().trim()
+
+  if (str1 === str2) return 1
+  if (str1.length === 0 || str2.length === 0) return 0
+
+  const maxLen = Math.max(str1.length, str2.length)
+  const distance = levenshteinDistance(str1, str2)
+  return 1 - distance / maxLen
+}
+
 // Types of duplicates
 export type DuplicateType = 'uuid' | 'exact' | 'sourceHash'
 
@@ -161,14 +200,17 @@ export interface DuplicateGroup {
   reasons: string[]
 }
 
+export interface DeduplicationOptions {
+  dateBuffer?: number // days difference allowed (default 1)
+  minSimilarity?: number // minimum similarity to report (default 0.7)
+  amountTolerance?: number // percentage tolerance for amount (default 0.02 = 2%)
+}
+
 export function findPotentialDuplicates(
   records: ExpenseRecord[],
-  options: {
-    dateBuffer?: number // days difference allowed (default 1)
-    minSimilarity?: number // minimum similarity to report (default 0.7)
-  } = {}
+  options: DeduplicationOptions = {}
 ): PotentialDuplicate[] {
-  const { dateBuffer = 1, minSimilarity = 0.7 } = options
+  const { dateBuffer = 1, minSimilarity = 0.7, amountTolerance = 0.02 } = options
   const duplicates: PotentialDuplicate[] = []
   const checked = new Set<string>()
 
@@ -182,7 +224,7 @@ export function findPotentialDuplicates(
       if (checked.has(key)) continue
       checked.add(key)
 
-      const result = checkSimilarity(r1, r2, dateBuffer)
+      const result = checkSimilarity(r1, r2, dateBuffer, amountTolerance)
 
       if (result.similarity >= minSimilarity) {
         duplicates.push({
@@ -292,17 +334,27 @@ export function groupDuplicates(duplicates: PotentialDuplicate[]): DuplicateGrou
 function checkSimilarity(
   r1: ExpenseRecord,
   r2: ExpenseRecord,
-  dateBuffer: number
+  dateBuffer: number,
+  amountTolerance: number
 ): { similarity: number; reasons: string[] } {
   let score = 0
   const reasons: string[] = []
 
-  // Amount match is required
-  if (r1.amount !== r2.amount) {
+  // Amount match with tolerance
+  const maxAmount = Math.max(r1.amount, r2.amount)
+  const amountDiff = maxAmount > 0 ? Math.abs(r1.amount - r2.amount) / maxAmount : 0
+
+  if (amountDiff === 0) {
+    score += 0.35
+    reasons.push('Same amount')
+  } else if (amountDiff <= amountTolerance) {
+    score += 0.25
+    const diffPercent = Math.round(amountDiff * 100)
+    reasons.push(`Amount within ${diffPercent}%`)
+  } else {
+    // Amounts too different
     return { similarity: 0, reasons: [] }
   }
-  score += 0.4
-  reasons.push('Same amount')
 
   // Check date similarity
   const d1 = new Date(r1.date)
@@ -310,7 +362,7 @@ function checkSimilarity(
   const daysDiff = Math.abs(d1.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24)
 
   if (daysDiff === 0) {
-    score += 0.3
+    score += 0.25
     reasons.push('Same date')
   } else if (daysDiff <= dateBuffer) {
     score += 0.15
@@ -318,6 +370,16 @@ function checkSimilarity(
   } else {
     // Dates too far apart
     return { similarity: 0, reasons: [] }
+  }
+
+  // Check title similarity
+  const titleSim = stringSimilarity(r1.title, r2.title)
+  if (titleSim >= 0.9) {
+    score += 0.2
+    reasons.push('Very similar title')
+  } else if (titleSim >= 0.7) {
+    score += 0.1
+    reasons.push('Similar title')
   }
 
   // Check participant overlap
@@ -337,7 +399,7 @@ function checkSimilarity(
 
   const overlapRatio = overlap / Math.max(r1Participants.size, r2Participants.size)
   if (overlapRatio === 1) {
-    score += 0.2
+    score += 0.15
     reasons.push('Same participants')
   } else if (overlapRatio > 0.5) {
     score += 0.1
@@ -353,13 +415,14 @@ function checkSimilarity(
   // Check accounts match
   const r1Accounts = r1.accounts?.map((a) => `${a.accountId}:${a.amount}`).sort().join(',') || ''
   const r2Accounts = r2.accounts?.map((a) => `${a.accountId}:${a.amount}`).sort().join(',') || ''
-  if (r1Accounts !== r2Accounts) {
-    // Reduce similarity if accounts differ
+  if (r1Accounts !== r2Accounts && r1Accounts && r2Accounts) {
+    // Reduce similarity if both have accounts but they differ
     score -= 0.1
     reasons.push('Different accounts')
   }
 
-  return { similarity: Math.max(0, score), reasons }
+  // Normalize to max 1.0
+  return { similarity: Math.min(1, Math.max(0, score)), reasons }
 }
 
 // Merge two records (used when user chooses to merge)

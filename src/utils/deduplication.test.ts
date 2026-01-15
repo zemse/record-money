@@ -412,6 +412,185 @@ describe('findPotentialDuplicates', () => {
       expect(duplicates[i - 1].similarity).toBeGreaterThanOrEqual(duplicates[i].similarity)
     }
   })
+
+  describe('title similarity', () => {
+    it('should detect very similar titles (>90%)', () => {
+      const records = [
+        createRecord({ uuid: 'r1', amount: 100, date: '2024-01-15', title: 'Coffee at Starbucks' }),
+        createRecord({ uuid: 'r2', amount: 100, date: '2024-01-15', title: 'Coffee at Starbuck' }), // Minor typo
+      ]
+
+      const duplicates = findPotentialDuplicates(records)
+
+      expect(duplicates).toHaveLength(1)
+      expect(duplicates[0].reasons).toContain('Very similar title')
+    })
+
+    it('should detect similar titles (70-90%)', () => {
+      const records = [
+        createRecord({ uuid: 'r1', amount: 100, date: '2024-01-15', title: 'Coffee at Starbucks Downtown' }),
+        createRecord({ uuid: 'r2', amount: 100, date: '2024-01-15', title: 'Coffee at Starbucks Uptown' }), // ~75% similar
+      ]
+
+      const duplicates = findPotentialDuplicates(records)
+
+      expect(duplicates).toHaveLength(1)
+      expect(duplicates[0].reasons).toContain('Similar title')
+    })
+
+    it('should not boost score for very different titles', () => {
+      const records = [
+        createRecord({ uuid: 'r1', amount: 100, date: '2024-01-15', title: 'Coffee' }),
+        createRecord({ uuid: 'r2', amount: 100, date: '2024-01-15', title: 'Groceries at Walmart' }),
+      ]
+
+      const duplicates = findPotentialDuplicates(records)
+
+      expect(duplicates).toHaveLength(1)
+      expect(duplicates[0].reasons).not.toContain('Similar title')
+      expect(duplicates[0].reasons).not.toContain('Very similar title')
+    })
+
+    it('should be case insensitive for title matching', () => {
+      const records = [
+        createRecord({ uuid: 'r1', amount: 100, date: '2024-01-15', title: 'COFFEE AT STARBUCKS' }),
+        createRecord({ uuid: 'r2', amount: 100, date: '2024-01-15', title: 'coffee at starbucks' }),
+      ]
+
+      const duplicates = findPotentialDuplicates(records)
+
+      expect(duplicates).toHaveLength(1)
+      expect(duplicates[0].reasons).toContain('Very similar title')
+    })
+  })
+
+  describe('amount tolerance', () => {
+    it('should match amounts within tolerance (default 2%)', () => {
+      const records = [
+        createRecord({ uuid: 'r1', amount: 100, date: '2024-01-15' }),
+        createRecord({ uuid: 'r2', amount: 101, date: '2024-01-15' }), // 1% difference
+      ]
+
+      const duplicates = findPotentialDuplicates(records)
+
+      expect(duplicates).toHaveLength(1)
+      expect(duplicates[0].reasons.some((r) => r.includes('Amount within'))).toBe(true)
+    })
+
+    it('should not match amounts beyond tolerance', () => {
+      const records = [
+        createRecord({ uuid: 'r1', amount: 100, date: '2024-01-15' }),
+        createRecord({ uuid: 'r2', amount: 105, date: '2024-01-15' }), // 5% difference
+      ]
+
+      const duplicates = findPotentialDuplicates(records, { amountTolerance: 0.02 })
+
+      expect(duplicates).toHaveLength(0)
+    })
+
+    it('should respect custom amount tolerance', () => {
+      const records = [
+        createRecord({ uuid: 'r1', amount: 100, date: '2024-01-15' }),
+        createRecord({ uuid: 'r2', amount: 110, date: '2024-01-15' }), // 10% difference
+      ]
+
+      // With default tolerance (2%), should not match
+      const defaultTolerance = findPotentialDuplicates(records)
+      expect(defaultTolerance).toHaveLength(0)
+
+      // With higher tolerance (15%), should match
+      const higherTolerance = findPotentialDuplicates(records, { amountTolerance: 0.15 })
+      expect(higherTolerance).toHaveLength(1)
+    })
+
+    it('should give higher score for exact amount match', () => {
+      const records = [
+        createRecord({ uuid: 'r1', amount: 100, date: '2024-01-15' }),
+        createRecord({ uuid: 'r2', amount: 100, date: '2024-01-15' }), // Exact match
+        createRecord({ uuid: 'r3', amount: 101, date: '2024-01-15' }), // 1% difference
+      ]
+
+      const duplicates = findPotentialDuplicates(records)
+
+      // Find the pair with exact amount match
+      const exactPair = duplicates.find(
+        (d) =>
+          (d.record1.uuid === 'r1' && d.record2.uuid === 'r2') ||
+          (d.record1.uuid === 'r2' && d.record2.uuid === 'r1')
+      )
+      // Find the pair with approximate amount match
+      const approxPair = duplicates.find(
+        (d) =>
+          (d.record1.uuid === 'r1' && d.record2.uuid === 'r3') ||
+          (d.record1.uuid === 'r3' && d.record2.uuid === 'r1')
+      )
+
+      expect(exactPair).toBeDefined()
+      expect(approxPair).toBeDefined()
+      expect(exactPair!.similarity).toBeGreaterThan(approxPair!.similarity)
+    })
+  })
+
+  describe('combined scoring', () => {
+    it('should accumulate scores from multiple factors', () => {
+      const records = [
+        createRecord({
+          uuid: 'r1',
+          amount: 100,
+          date: '2024-01-15',
+          title: 'Coffee at Starbucks',
+          category: 'Food',
+          paidBy: [{ email: 'alice@test.com', share: 100 }],
+          paidFor: [{ email: 'bob@test.com', share: 100 }],
+        }),
+        createRecord({
+          uuid: 'r2',
+          amount: 100,
+          date: '2024-01-15',
+          title: 'Coffee at Starbucks',
+          category: 'Food',
+          paidBy: [{ email: 'alice@test.com', share: 100 }],
+          paidFor: [{ email: 'bob@test.com', share: 100 }],
+        }),
+      ]
+
+      const duplicates = findPotentialDuplicates(records)
+
+      expect(duplicates).toHaveLength(1)
+      expect(duplicates[0].similarity).toBeGreaterThanOrEqual(0.9)
+      expect(duplicates[0].reasons).toContain('Same amount')
+      expect(duplicates[0].reasons).toContain('Same date')
+      expect(duplicates[0].reasons).toContain('Very similar title')
+      expect(duplicates[0].reasons).toContain('Same participants')
+      expect(duplicates[0].reasons).toContain('Same category')
+    })
+
+    it('should cap similarity at 1.0', () => {
+      const records = [
+        createRecord({
+          uuid: 'r1',
+          amount: 100,
+          date: '2024-01-15',
+          title: 'Exact Title Match',
+          category: 'Food',
+          paidBy: [{ email: 'alice@test.com', share: 100 }],
+        }),
+        createRecord({
+          uuid: 'r2',
+          amount: 100,
+          date: '2024-01-15',
+          title: 'Exact Title Match',
+          category: 'Food',
+          paidBy: [{ email: 'alice@test.com', share: 100 }],
+        }),
+      ]
+
+      const duplicates = findPotentialDuplicates(records)
+
+      expect(duplicates).toHaveLength(1)
+      expect(duplicates[0].similarity).toBeLessThanOrEqual(1)
+    })
+  })
 })
 
 describe('regenerateUuid', () => {
