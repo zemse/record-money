@@ -95,8 +95,9 @@ When a placeholder person creates their own account:
 2. Later discovers they have a placeholder in someone's group
 3. User initiates merge: "I am this person"
 4. Group admin verifies (emoji check or similar)
-5. Merge mutation created: updates all references from old UUID to new UUID
-6. Old placeholder person entry deleted
+5. Merge mutation created
+6. All clients apply the merge: replace old UUID with new UUID in all records
+7. Old placeholder person entry deleted
 
 **Merge mutation:**
 ```typescript
@@ -104,14 +105,20 @@ When a placeholder person creates their own account:
   targetUuid: "new-person-uuid",
   targetType: "person",
   operation: {
-    type: "update",
-    changes: [
-      { field: "mergedFrom", old: null, new: "old-placeholder-uuid" }
-    ]
+    type: "merge",
+    fromUuid: "old-placeholder-uuid"  // UUID being merged into targetUuid
   }
 }
-// Separate mutations update all records that referenced old UUID
 ```
+
+**Applying merge:**
+When a client receives a merge mutation:
+1. Find all records where `paidBy` or `paidFor` contains `fromUuid`
+2. Replace `fromUuid` with `targetUuid` in those arrays
+3. Delete the old Person entry (`fromUuid`)
+4. Keep the new Person entry (`targetUuid`)
+
+This is a single mutation that implicitly updates all record references, avoiding potentially hundreds of individual record mutations.
 
 ---
 

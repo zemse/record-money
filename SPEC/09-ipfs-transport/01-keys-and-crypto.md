@@ -88,7 +88,8 @@ interface Mutation {
 type MutationOperation =
   | CreateOp
   | DeleteOp
-  | UpdateOp;
+  | UpdateOp
+  | MergeOp;
 
 interface CreateOp {
   type: 'create';
@@ -103,6 +104,13 @@ interface DeleteOp {
 interface UpdateOp {
   type: 'update';
   changes: FieldChange[];          // list of field-level changes
+}
+
+interface MergeOp {
+  type: 'merge';
+  fromUuid: string;                // UUID being merged into targetUuid
+  // Only valid for targetType: 'person'
+  // Clients replace all occurrences of fromUuid with targetUuid in records
 }
 ```
 
