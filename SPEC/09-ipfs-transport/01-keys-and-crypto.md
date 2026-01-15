@@ -12,6 +12,12 @@
 | IPNS keys | Ed25519 | Required by IPFS/IPNS |
 | UUID | UUIDv4 | Mutation and record identifiers |
 
+## Browser Implementation Notes
+
+- **Ed25519:** Use `@noble/ed25519` (~15KB, audited). Web Crypto API does not support Ed25519.
+- **P-256, AES-GCM, HKDF, SHA-256:** Use native Web Crypto API.
+- **Canonical JSON:** Use `fast-json-stable-stringify` for deterministic mutation serialization.
+
 ## Key Summary
 
 ### Device Keys (unique per device)
@@ -22,6 +28,8 @@
 | **IPNS Keypair** | Ed25519 | Publish to device's IPNS feed | Device local storage |
 
 Each device generates its own keypairs on first launch. Private keys never leave the device.
+
+**Key Storage:** Private keys stored in IndexedDB, encrypted with a browser-derived device key (no password required). Clearing browser data requires re-pairing.
 
 ### User Keys (shared across user's devices)
 
@@ -81,7 +89,7 @@ Event-based only (no time-based rotation to support offline devices):
 
 ## Pinning Provider
 
-Abstract pinning service to allow multiple providers.
+Use provider HTTP APIs directly (not Helia). Provider must support IPNS or equivalent mutable naming.
 
 ```typescript
 interface PinningProvider {
@@ -93,12 +101,6 @@ interface PinningProvider {
   publishIpns(key: Ed25519PrivateKey, cid: CID): Promise<void>;
 }
 ```
-
-Supported providers:
-- Piñata (default)
-- Infura
-- web3.storage
-- Self-hosted IPFS node
 
 Provider config stored in device settings.
 

@@ -2,7 +2,7 @@
 
 ## Prerequisite
 
-At least one device must have a pinning provider configured (Piñata, Infura, web3.storage, or self-hosted).
+At least one device must have a pinning provider configured with IPNS support.
 
 ## QR Payload (Device A generates)
 

@@ -2,7 +2,9 @@
 
 All data on IPFS is public. Everything must be encrypted.
 
-**Database vs Mutations:** Database is current state. Mutations are ordered updates. Applying all mutations from start produces the same state (intentional redundancy for sync reliability).
+## Database vs Mutations
+
+Database is current state (materialized view). Mutations are the sync source of truth. Keep both in IndexedDB - mutations for sync, materialized views for fast reads. On local change: create mutation, then apply to materialized view. On incoming sync: verify mutation, check conflicts, then apply to materialized view.
 
 ## Encryption Keys
 

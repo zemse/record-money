@@ -286,6 +286,10 @@ UI: side-by-side comparison showing conflicting field values
 
 Bulk conflicts: scroll UI, left/right to choose per field
 
+## Capturing Old Values
+
+On update: read current state from materialized view before applying change. Use current values as `old` in the mutation's field changes. This enables field-level conflict detection.
+
 ## Publishing
 
 On local change:

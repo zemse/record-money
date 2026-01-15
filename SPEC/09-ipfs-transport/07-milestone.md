@@ -96,3 +96,7 @@
 - [ ] Adaptive polling behavior
 
 **Review gate after each section**
+
+## Development Notes
+
+Use mock pinning provider for unit tests. For multi-device testing: use multiple browser profiles or incognito + normal window.
