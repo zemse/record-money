@@ -266,25 +266,168 @@ B: { field: "paidBy", op: "update", key: "person-1", ... }
 
 ## Conflict Resolution
 
-UI: side-by-side comparison showing conflicting field values
+Conflicts are resolved by creating a `ResolveConflict` mutation that voids the losing mutations. This ensures replay from scratch produces the same state.
+
+### ResolveConflict Mutation
+
+```typescript
+interface ResolveConflictOp {
+  type: 'resolve_conflict';
+  conflictType: 'field' | 'delete_vs_update' | 'merge_vs_update';
+  winnerMutationUuid: string;       // the mutation that takes effect
+  voidedMutationUuids: string[];    // mutations that have NO effect
+  targetUuid: string;               // record/person involved (for context)
+  summary?: string;                 // human-readable description
+}
+```
+
+**Example:**
+```typescript
+{
+  uuid: "mut-resolve-123",
+  id: 15,
+  targetUuid: "mut-resolve-123",  // self-referential for resolve mutations
+  targetType: 'record',           // type of entity involved in conflict
+  operation: {
+    type: 'resolve_conflict',
+    conflictType: 'field',
+    winnerMutationUuid: "mut-456",
+    voidedMutationUuids: ["mut-789"],
+    targetUuid: "rec-001",
+    summary: "Kept amount=150 from Device A, voided amount=200 from Device B"
+  },
+  timestamp: Date.now(),
+  signedAt: Date.now(),
+  authorDevicePublicKey: ...,
+  signature: ...
+}
+```
+
+### Replay Algorithm
+
+When building state from mutations (fresh device or rebuild):
+
+```typescript
+function replayMutations(mutations: Mutation[]): Database {
+  // Step 1: Collect all voided mutation UUIDs
+  const voidedUuids = new Set<string>();
+  for (const mut of mutations) {
+    if (mut.operation.type === 'resolve_conflict') {
+      for (const uuid of mut.operation.voidedMutationUuids) {
+        voidedUuids.add(uuid);
+      }
+    }
+  }
+
+  // Step 2: Replay mutations, skipping voided ones
+  const db = emptyDatabase();
+  for (const mut of sortedByDeviceAndId(mutations)) {
+    if (voidedUuids.has(mut.uuid)) {
+      continue;  // This mutation was voided by a conflict resolution
+    }
+    applyMutation(db, mut);
+  }
+  return db;
+}
+```
+
+### Conflict Types
+
+#### 1. Field Conflict (same field, different values)
+
+```
+Device A: { field: "amount", old: 100, new: 150 }  // mut-A
+Device B: { field: "amount", old: 100, new: 200 }  // mut-B
+```
+
+**Resolution:** User picks winner (e.g., A wins)
+- Create ResolveConflict: `winnerMutationUuid: "mut-A", voidedMutationUuids: ["mut-B"]`
+- mut-B has no effect when replaying
+
+#### 2. Delete vs Update Conflict
+
+```
+Device A: { type: "delete", targetUuid: "rec-123" }           // mut-A
+Device B: { type: "update", targetUuid: "rec-123", changes: [...] }  // mut-B
+```
+
+**Resolution options:**
+- **Keep delete:** void the update → `voidedMutationUuids: ["mut-B"]`
+- **Keep record:** void the delete → `voidedMutationUuids: ["mut-A"]`
+
+**UI:** "Device A deleted this record. Device B updated it. What should happen?"
+- Option 1: "Delete the record" (void update)
+- Option 2: "Keep the record with updates" (void delete)
+
+#### 3. Merge vs Update Conflict
+
+```
+Device A: { type: "merge", targetUuid: "person-1", fromUuid: "person-2" }  // mut-A
+Device B: { type: "update", targetUuid: "person-2", changes: [...] }       // mut-B
+```
+
+Person-2 is being merged into person-1, but also being updated.
+
+**Resolution options:**
+- **Apply merge, discard update:** void mut-B
+- **Apply merge, redirect update:** void mut-B, create new update targeting person-1
+- **Cancel merge, keep update:** void mut-A
+
+**UI:** "Device A merged [Person 2] into [Person 1]. Device B updated [Person 2]. What should happen?"
+- Option 1: "Complete merge, discard updates to [Person 2]"
+- Option 2: "Complete merge, apply updates to [Person 1] instead"
+- Option 3: "Cancel merge, keep [Person 2] with updates"
+
+### UI Flow
 
 **Binary conflict (2 devices):**
 - Show both values + timestamps + authors
 - User picks: Keep Mine | Keep Theirs
+- Creates ResolveConflict mutation voiding the loser
 
 **Multi-device conflict (3+ devices):**
 - Show all conflicting values side-by-side
 - Display for each: value, timestamp, author device name
 - User picks one value as winner
+- Creates ResolveConflict mutation voiding all losers
 
-**Resolution actions:**
-- Keep Mine → ignore incoming change for that field
-- Keep Theirs/Pick Winner → create update mutation with winning value
-- Winner mutation uses loser's `new` as `old` to maintain chain
+**Bulk conflicts:** Scroll UI, swipe left/right to choose per field. Single "Apply All" creates one ResolveConflict per conflict.
 
-**Auto-merge:** When no conflicts exist (different fields changed), apply all changes automatically without user intervention.
+**Auto-merge:** When no conflicts exist (different fields changed), apply all changes automatically without user intervention. No ResolveConflict needed.
 
-Bulk conflicts: scroll UI, left/right to choose per field
+### Conflicting Resolutions
+
+Two devices may resolve the same conflict differently:
+
+```
+Device A: ResolveConflict { winnerMutationUuid: "mut-X", voidedMutationUuids: ["mut-Y"] }
+Device B: ResolveConflict { winnerMutationUuid: "mut-Y", voidedMutationUuids: ["mut-X"] }
+```
+
+**Detection:** When importing a ResolveConflict, check if any of its `voidedMutationUuids` is the `winnerMutationUuid` in an existing ResolveConflict (or vice versa).
+
+**Resolution:** Treat as a conflict requiring user input.
+
+**UI:** "Two devices resolved a conflict differently. Which resolution should be used?"
+- Show original conflict context (the field/record involved)
+- Show both resolution choices with author device names
+- User picks which resolution wins
+
+**Result:** Create a new ResolveConflict that voids the losing ResolveConflict mutation:
+```typescript
+{
+  operation: {
+    type: 'resolve_conflict',
+    conflictType: 'field',  // or original conflict type
+    winnerMutationUuid: "resolve-A",  // the winning resolution
+    voidedMutationUuids: ["resolve-B", "mut-Y"],  // losing resolution + its winner
+    targetUuid: "rec-001",
+    summary: "Accepted Device A's resolution, voided Device B's resolution"
+  }
+}
+```
+
+**Replay behavior:** The final ResolveConflict voids both the losing resolution AND the mutation that resolution had chosen as winner. This ensures consistent state.
 
 ## Capturing Old Values
 

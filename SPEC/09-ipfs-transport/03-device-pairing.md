@@ -33,7 +33,7 @@ type ProviderConfig =
 2. **B scans**, validates, if fresh needs provider config in payload
 3. **B generates** own device keypairs (signing + IPNS)
 4. **B publishes response** to temp IPNS: `{ipnsPubKey, authPubKey}`
-5. **B shows 4 emojis** (hash of response)
+5. **B shows 6 emojis** (hash of response)
 6. **A polls temp IPNS**, sees response
 7. **A verifies emojis match** with B
 8. **A migrates solo data** (if first pair): generates Personal Key + Broadcast Key, seals existing records as mutations
@@ -52,8 +52,11 @@ type ProviderConfig =
 
 ```
 hash = sha256(ipnsPubKey || authPubKey)
-emojis = [emojiSet[hash[0]], emojiSet[hash[1]], emojiSet[hash[2]], emojiSet[hash[3]]]
+emojis = [emojiSet[hash[0]], emojiSet[hash[1]], emojiSet[hash[2]],
+          emojiSet[hash[3]], emojiSet[hash[4]], emojiSet[hash[5]]]
 ```
+
+Uses 6 bytes (48 bits of entropy) for security against collision attacks. With 256-entry emoji set, provides ~281 trillion combinations.
 
 ## Adding Device C Later
 

@@ -125,7 +125,8 @@ interface Mutation {
   targetUuid: string;              // UUID or deviceId of target
   targetType: 'record' | 'person' | 'group' | 'device';
   operation: MutationOperation;
-  timestamp: number;               // Unix ms
+  timestamp: number;               // Unix ms (user-visible, for display/ordering)
+  signedAt: number;                // Unix ms (signing time, for validity checking)
   authorDevicePublicKey: Uint8Array;  // 65-byte uncompressed P-256 public key
   signature: Uint8Array;           // 64-byte ECDSA P-256 signature (r || s)
 }
@@ -135,7 +136,8 @@ type MutationOperation =
   | DeleteOp
   | UpdateOp
   | MergeOp
-  | ExitOp;
+  | ExitOp
+  | ResolveConflictOp;
 
 interface CreateOp {
   type: 'create';
@@ -164,6 +166,16 @@ interface MergeOp {
   fromUuid: string;                // UUID being merged into targetUuid
   // Only valid for targetType: 'person'
   // Clients replace all occurrences of fromUuid with targetUuid in records
+}
+
+interface ResolveConflictOp {
+  type: 'resolve_conflict';
+  conflictType: 'field' | 'delete_vs_update' | 'merge_vs_update';
+  winnerMutationUuid: string;      // the mutation that takes effect
+  voidedMutationUuids: string[];   // mutations that have NO effect when replaying
+  targetUuid: string;              // record/person involved (for context)
+  summary?: string;                // human-readable description
+  // See 04-sync-protocol.md for full conflict resolution spec
 }
 ```
 
@@ -277,3 +289,22 @@ interface ArrayUpdateOp {
 2. Serialize to canonical JSON
 3. `hash = SHA-256(canonicalJson)`
 4. `valid = ECDSA-P256-Verify(authorDevicePublicKey, hash, signature)`
+5. Check `signedAt` is within validity window (see below)
+
+## Signature Validity Window
+
+Mutations include a `signedAt` timestamp that's part of the signed payload. This prevents removed devices from creating new valid mutations.
+
+**Validation rules:**
+1. `signedAt` must be within ±5 minutes of current time when first received
+2. Once accepted, mutation is stored and `signedAt` check is not repeated
+3. If `signedAt` is too old/future, reject mutation with "signature expired"
+
+**Why both `timestamp` and `signedAt`?**
+- `timestamp`: User-controlled, for display and logical ordering (e.g., backdating an expense)
+- `signedAt`: System-controlled, always set to current time when signing, used for validity
+
+**Attack prevention:**
+- Removed device creates mutation days later → `signedAt` is current → but device removed from DeviceRing → author check fails
+- Removed device replays old mutation → `signedAt` is old → signature expired
+- Combined: removed devices cannot create valid mutations after removal

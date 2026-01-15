@@ -96,7 +96,7 @@ Note: Group symmetric key NOT included in link for security.
      recipientName?: string
    }
    ```
-4. **Recipient shows 4 emojis** (hash of response, same as device pairing)
+4. **Recipient shows 6 emojis** (hash of response, same as device pairing)
 5. **Inviter polls temp IPNS**, sees encrypted response
 6. **Inviter decrypts** with temp sym key, gets recipient's device keys
 7. **Inviter verifies emojis** match with recipient (prevents MITM)
@@ -167,10 +167,21 @@ After new person joins via invite link:
 ### Key Rotation Race
 
 Device sees deletion mutation but hasn't received new key via PeerDirectory yet:
-- Show UI: "Group key rotating, please wait..."
-- Retry fetching PeerDirectory
-- If still failing after retries: "Contact group admin to re-share key"
-- Handle socially (re-invite if needed)
+
+**Retry strategy:**
+1. Immediate retry (0s delay)
+2. Exponential backoff: 2s, 4s, 8s, 16s, 30s (capped)
+3. Maximum 10 retries (~2 minutes total)
+
+**UI states:**
+- During retries: "Group key rotating, please wait..." (with spinner)
+- After max retries: "Key sync failed. Ask [admin name] to re-share the group."
+- Option button: "Request key re-share" (creates a pending request visible to admin)
+
+**Fallback:**
+- Admin can manually trigger "Re-share keys with all members" from group settings
+- This re-encrypts and publishes PeerDirectory entries for all members
+- Members retry on next poll cycle
 
 ### Removed Person's View
 
