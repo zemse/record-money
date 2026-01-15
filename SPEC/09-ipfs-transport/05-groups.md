@@ -66,13 +66,12 @@ Note: Group symmetric key NOT included in link for security.
 5. **Inviter polls temp IPNS**, sees encrypted response
 6. **Inviter decrypts** with temp sym key, gets recipient's device keys
 7. **Inviter verifies emojis** match with recipient (prevents MITM)
-8. **Both become peers**:
-   - Inviter adds recipient to PeerDirectory (with Group Key in entry)
-   - Recipient adds inviter to PeerDirectory
+8. **Inviter adds recipient** to PeerDirectory (with Group Key in `sharedGroups`)
 9. **Recipient polls inviter's PeerDirectory**, finds self, gets Group Key
-10. **Recipient joins group**: creates person mutation, publishes own group manifest
-11. **Other people discover new person** via group → add to their PeerDirectory
-12. **New person discovers other people** via group → adds them to PeerDirectory
+10. **Recipient adds inviter** to own PeerDirectory (now with Group Key in `sharedGroups`)
+11. **Recipient joins group**: creates person mutation, publishes own group manifest
+12. **Other people discover new person** via group → add to their PeerDirectory
+13. **New person discovers other people** via group → adds them to PeerDirectory
 
 ### Rejecting invite
 
@@ -146,9 +145,34 @@ Device sees deletion mutation but hasn't received new key via PeerDirectory yet:
 - Local data preserved for reference
 - Can export their own records if needed
 
-## Closing Group
+## Exiting Group
 
-Create close mutation → stop polling → keep data for reference → hide from active groups
+A member can voluntarily leave a group.
+
+### Exit Mutation
+
+```typescript
+{
+  targetType: 'person',
+  targetUuid: selfPersonUuid,  // the exiting member's UUID
+  operation: { type: 'exit' }  // signals voluntary departure
+}
+```
+
+### Exit Flow
+
+1. **Create exit mutation** for self
+2. **Publish updated GroupManifest** with exit mutation
+3. **Stop polling** other members' feeds for this group
+4. **Remove group** from PeerDirectory `sharedGroups` for all peers
+5. **Keep local data** archived for reference (charts, history)
+
+### After Exit
+
+- Other members see exit mutation → stop polling the departed member
+- No key rotation needed (voluntary exit, not removal)
+- Departed member retains read-only archive of data up to exit point
+- Departed member cannot see new group activity after exit
 
 ## Personal Ledger
 

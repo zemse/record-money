@@ -132,7 +132,8 @@ type MutationOperation =
   | CreateOp
   | DeleteOp
   | UpdateOp
-  | MergeOp;
+  | MergeOp
+  | ExitOp;
 
 interface CreateOp {
   type: 'create';
@@ -142,6 +143,13 @@ interface CreateOp {
 interface DeleteOp {
   type: 'delete';
   // For device deletion, triggers key rotation
+  // For person deletion (removal from group), triggers Group Key rotation
+}
+
+interface ExitOp {
+  type: 'exit';
+  // Only valid for targetType: 'person' (self)
+  // Voluntary departure from group, no key rotation needed
 }
 
 interface UpdateOp {
