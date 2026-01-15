@@ -304,6 +304,60 @@ C can get A's changes via B without waiting for A.
 
 **Storage:** Grows linearly with total mutations. This is acceptable - storage is cheap. UI should show per-group storage usage so users can see space consumption. No compaction mechanism needed.
 
+## Error Recovery
+
+### Publish Failures
+
+**IPFS upload fails:**
+- Retry with exponential backoff
+- Local mutations remain in queue (`status: 'pending'`)
+- UI shows "Sync pending" indicator
+- Don't block user from making more changes
+
+**IPNS publish fails (after successful IPFS upload):**
+- Leave uploaded content pinned
+- Queue IPNS publish for retry
+- UI shows "Sync pending" indicator
+- On successful retry, IPNS points to already-uploaded CIDs
+
+**Orphan CIDs:**
+- If IPNS publish keeps failing, uploaded CIDs remain pinned but unreferenced
+- Acceptable trade-off: simpler than cleanup logic
+- User can manually trigger cleanup in settings if storage becomes issue
+
+### Sync Failures
+
+**Cannot fetch peer's IPNS:**
+- Retry with backoff
+- After N failures, mark peer as "unreachable"
+- UI shows "Cannot reach [Device Name]"
+- Continue syncing with other peers
+
+**Cannot decrypt peer's data:**
+- Likely removed from group/devices (key rotated)
+- UI shows "Sync failed - you may have been removed"
+- Stop polling that peer
+- Prompt user to re-pair if needed
+
+**Signature verification fails:**
+- Reject mutation
+- Log for debugging
+- Continue processing other mutations
+- UI warning: "Invalid data from [Device Name]"
+
+### Recovery Actions
+
+**Manual sync button:**
+- Retries all pending publishes
+- Re-polls all peers
+- Clears transient errors
+
+**Full resync (nuclear option):**
+- Available in settings
+- Fetches full database from peer
+- User chooses: merge or overwrite local
+- Resets sync state for that peer
+
 ## Full Resync (fallback)
 
 If mutations sync fails: fetch full database, merge or overwrite (user choice).
