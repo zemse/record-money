@@ -302,7 +302,7 @@ Store imported mutations with original signature. Include in own mutations for f
 
 C can get A's changes via B without waiting for A.
 
-**Note:** Storage grows linearly with total mutations across all users. Consider adding compaction in future (snapshot + prune old mutations).
+**Storage:** Grows linearly with total mutations. This is acceptable - storage is cheap. UI should show per-group storage usage so users can see space consumption. No compaction mechanism needed.
 
 ## Full Resync (fallback)
 
