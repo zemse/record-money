@@ -70,7 +70,7 @@ User with 2 devices in 3 groups:
 Keys are shared via PeerDirectory entries (ECDH encrypted per-recipient):
 
 1. `sharedSecret = ECDH(A.private, B.public)` → 256-bit raw shared secret
-2. `aesKey = HKDF-SHA256(sharedSecret, salt="recordmoney-key-share", info="")` → 256-bit AES key
+2. `aesKey = HKDF-SHA256(ikm=sharedSecret, salt="", info="recordmoney-key-share")` → 256-bit AES key
 3. `ciphertext = AES-256-GCM(aesKey, iv=random96bit, plaintext={personalKey?, broadcastKey, sharedGroups})`
 4. Publish ciphertext in PeerDirectory
 

@@ -25,7 +25,7 @@ Keys are distributed via PeerDirectory (ECDH encrypted per-recipient).
   databaseCid: CID,                        // → encrypted full db (personal + group data)
   latestMutationId: EncryptedValue,        // encrypted with Personal Key
   chunkIndex: EncryptedValue,              // encrypted with Personal Key
-  // decrypts to: [{startId, endId, cid}]
+  // decrypts to: MutationChunks (see below)
 
   // Encrypted with Broadcast Key (self devices + peers)
   deviceRingCid: CID,                      // → DeviceRing
@@ -93,17 +93,40 @@ Randomized order to prevent analysis.
 
 **Note:** PeerDirectory entries may exist for peers not yet in a group (pending invites) or may lag behind actual group membership. GroupManifest.database.people is the source of truth for who is in a group.
 
-## MutationChunk
+**GroupManifest CID discovery:** When a member publishes a new GroupManifest:
+1. Upload new GroupManifest, get new CID
+2. Update `manifestCid` in own PeerDirectory for that group
+3. Re-encrypt and publish updated PeerDirectory
+4. Other members poll your DeviceManifest → read your PeerDirectory → find updated `manifestCid` → fetch new GroupManifest
+
+## MutationChunks
 
 ```typescript
-// Entire chunk is encrypted with Personal Key
-// Decrypts to:
-{
-  mutations: [{id, cid}]  // each cid → encrypted Mutation
-}
+type MutationChunks = Array<{
+  startId: number;      // first mutation ID in this chunk
+  endId: number;        // last mutation ID in this chunk
+  cid: string;          // IPFS CID → encrypted Mutation[] (~100 mutations)
+}>;
+
+// Encrypted and stored in DeviceManifest.chunkIndex or GroupManifest.chunkIndex
+// Each CID points to an encrypted Mutation[] (Personal Key or Group Key)
 ```
 
-One chunk per ~100 mutations. Chunk itself is encrypted to hide mutation IDs.
+**Update mechanics:**
+1. New mutations accumulated locally in "current chunk"
+2. When current chunk reaches ~100 mutations, encrypt and upload as new chunk
+3. Add entry to chunkIndex, publish updated manifest
+4. Start new current chunk
+
+**Quick sync:** To catch up from mutation ID X:
+1. Find chunk where `startId <= X <= endId` (partial chunk, skip mutations ≤ X)
+2. Fetch all chunks after that (full chunks)
+3. Apply mutations in order
+
+**Example:** Device has mutations 1-250. Peer publishes mutations 1-347.
+- Chunk index: `[{1-100}, {101-200}, {201-300}, {301-347}]`
+- Device fetches chunks `{201-300}` and `{301-347}`
+- Skips mutations 201-250 (already have), applies 251-347
 
 ## GroupManifest
 
@@ -118,12 +141,12 @@ One chunk per ~100 mutations. Chunk itself is encrypted to hide mutation IDs.
     records: Record[],       // group expenses (merged from all members)
     people: Person[]         // SOURCE OF TRUTH for group membership
   },
-  chunkIndex: [{startId, endId, cid}],  // cids point to encrypted group MutationChunks
+  chunkIndex: MutationChunks,           // same structure as DeviceManifest, encrypted with Group Key
   latestMutationId: number              // highest mutation ID in THIS manifest (publisher's own)
 }
 ```
 
-Group MutationChunks are also encrypted with Group Key.
+Group mutation chunks (the `Mutation[]` each CID points to) are encrypted with Group Key.
 
 **Per-member publishing:** Each group member publishes their own GroupManifest containing:
 - Their own mutations for this group (`latestMutationId` tracks their sequence)
@@ -161,7 +184,7 @@ interface Group {
 
 ## Person
 
-All individuals are tracked as Persons with UUID as primary identifier. See `01-data-models.md` for full Person interface.
+All individuals are tracked as Persons with UUID as primary identifier. See `../01-data-models.md` for full Person interface.
 
 Part of database (personal or group, encrypted):
 

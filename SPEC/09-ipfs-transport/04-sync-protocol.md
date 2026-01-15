@@ -286,14 +286,14 @@ interface ResolveConflictOp {
 {
   uuid: "mut-resolve-123",
   id: 15,
-  targetUuid: "mut-resolve-123",  // self-referential for resolve mutations
+  targetUuid: "rec-001",          // UUID of the record/person with conflict
   targetType: 'record',           // type of entity involved in conflict
   operation: {
     type: 'resolve_conflict',
     conflictType: 'field',
     winnerMutationUuid: "mut-456",
     voidedMutationUuids: ["mut-789"],
-    targetUuid: "rec-001",
+    targetUuid: "rec-001",        // same as outer targetUuid (for context in operation)
     summary: "Kept amount=150 from Device A, voided amount=200 from Device B"
   },
   timestamp: Date.now(),

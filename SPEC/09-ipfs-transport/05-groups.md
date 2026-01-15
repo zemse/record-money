@@ -164,6 +164,8 @@ After new person joins via invite link:
    - Stop polling removed person
    - Re-encrypt their own group data with new key
 
+**Note on historical data:** Each device republishes ALL mutations (full replication) encrypted with the current Group Key. New devices joining after key rotation receive historical data already re-encrypted with the current key - no special handling needed.
+
 ### Key Rotation Race
 
 Device sees deletion mutation but hasn't received new key via PeerDirectory yet:
