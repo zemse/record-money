@@ -6,19 +6,19 @@
 |---------|-----------|-------|
 | Signing | ECDSA P-256 (secp256r1) | SecureEnclave/WebCrypto compatible |
 | Key exchange | ECDH P-256 | Derives shared secret between devices |
-| Symmetric encryption | AES-256-GCM | Authenticated encryption, 96-bit IV |
+| Symmetric encryption | AES-256-GCM | Authenticated encryption |
 | Key derivation | HKDF-SHA256 | Derive AES key from ECDH shared secret |
 | Hashing | SHA-256 | Mutation signatures, emoji derivation |
 | IPNS keys | Ed25519 | Required by IPFS/IPNS |
 | UUID | UUIDv4 | Mutation and record identifiers |
 
-## Per Device
+## Per-Device Keys
 
-| Key | Algorithm | Purpose |
-|-----|-----------|---------|
-| Signing keypair | ECDSA P-256 | Sign mutations, SecureEnclave compatible |
-| IPNS keypair | Ed25519 | Publish to own IPNS feed |
-| Symmetric key | AES-256-GCM (256-bit) | Encrypt device content |
+| Key | Purpose |
+|-----|---------|
+| Signing keypair (P-256) | Sign mutations |
+| IPNS keypair (Ed25519) | Publish to own feed |
+| Symmetric key (256-bit) | Encrypt device content |
 
 ## Key Sharing
 
@@ -66,7 +66,7 @@ Provider config stored in device settings.
   uuid: string,              // UUIDv4
   id: number,                // per-device incremental
   kind: 'create'|'update'|'delete'|'override',
-  recordType: 'record'|'device'|'user'|'member'|'group',
+  recordType: 'record'|'device'|'person'|'group',
   targetUuid?: string,       // UUIDv4 of target record (for update/delete/override)
   dataOld?: any,
   dataNew?: any,

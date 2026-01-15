@@ -10,15 +10,14 @@ Each group has:
 ## Creating Group
 
 1. Generate group sym key
-2. Add self as first member
+2. Add self as first person
 3. Publish group manifest
-4. Add to own PeerDirectory
 
-## Inviting Members
+## Inviting People
 
-### Existing friend (via PeerDirectory)
+### Existing peer (via PeerDirectory)
 
-Add group to PeerEntry for that friend. Friend discovers by polling your PeerDirectory.
+Add group to PeerEntry for that person. They discover by polling your PeerDirectory.
 
 ### New person (invite link)
 
@@ -52,13 +51,13 @@ Note: Group symmetric key NOT included in link for security.
 5. **Inviter polls temp IPNS**, sees encrypted response
 6. **Inviter decrypts** with temp sym key, gets recipient's device keys
 7. **Inviter verifies emojis** match with recipient (prevents MITM)
-8. **Both become friends**:
+8. **Both become peers**:
    - Inviter adds recipient to PeerDirectory (with group sym key in entry)
    - Recipient adds inviter to PeerDirectory
 9. **Recipient polls inviter's PeerDirectory**, finds self, gets group sym key
-10. **Recipient joins group**: creates member mutation, publishes own group manifest
-11. **Other members discover new member** via group → add to their PeerDirectory
-12. **New member discovers other members** via group → adds them to PeerDirectory
+10. **Recipient joins group**: creates person mutation, publishes own group manifest
+11. **Other people discover new person** via group → add to their PeerDirectory
+12. **New person discovers other people** via group → adds them to PeerDirectory
 
 ### Rejecting invite
 
@@ -72,24 +71,24 @@ Inviter simply does not approve (doesn't add to PeerDirectory). Temp IPNS respon
 
 ## Device Discovery in Groups
 
-### New member joining
+### New person joining
 
-After new member joins via invite link:
-1. New member decrypts GroupManifest → sees all existing members' devices
-2. New member adds each existing member to own PeerDirectory (as friend)
-3. Existing members see new member in GroupManifest → add to their PeerDirectory
-4. All members can now poll each other's devices
+After new person joins via invite link:
+1. New person decrypts GroupManifest → sees all existing people's devices
+2. New person adds each existing person to own PeerDirectory
+3. Existing people see new person in GroupManifest → add to their PeerDirectory
+4. All people can now poll each other's devices
 
-### Existing member adds new device
+### Existing person adds new device
 
-Member adds new device → updates `selfDevices` in all PeerDirectory entries for friends → friends poll, see new device → start polling it
+Person adds new device → updates `selfDevices` in all PeerDirectory entries → peers poll, see new device → start polling it
 
-## Removing Members
+## Removing People
 
-1. Create member removal mutation
+1. Create person removal mutation
 2. Rotate group sym key
-3. Update PeerDirectory with new key for remaining members only
-4. Others see removal → stop polling removed member → get new key from PeerDirectory
+3. Update PeerDirectory with new key for remaining people only
+4. Others see removal → stop polling removed person → get new key from PeerDirectory
 
 ### Key rotation race
 
@@ -99,6 +98,6 @@ Device sees rotation mutation but hasn't received new key yet → show UI error,
 
 Create close mutation → stop polling → keep data for reference → hide from active groups
 
-## Personal Group
+## Personal Ledger
 
-Default group, only own devices, not shared. For personal expense tracking.
+Default group (displayed as "Personal Ledger" in UI), only own devices, not shared. For personal expense tracking. Other groups displayed as "Group Ledgers" in UI.

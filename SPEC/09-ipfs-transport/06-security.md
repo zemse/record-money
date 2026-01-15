@@ -2,34 +2,19 @@
 
 ## Threat Model
 
-High-trust (friends/family). Fork to exclude bad actors.
+High-trust (family/friends). Fork to exclude bad actors.
 
 ### Protected
 
 - Unauthorized writes → mutation signatures
-- Tampering → signature verification  
+- Tampering → signature verification
 - Eavesdropping → symmetric encryption
 - Single device compromise → key rotation
 
 ### Not protected
 
-- Compromised group member → fork to exclude
-- Intercepted invite link → acceptable risk
+- Compromised group person → fork to exclude
 - Metadata analysis → partial (randomized order)
-
-## Device Removal
-
-1. Create device removal mutation
-2. Remove from DeviceRing
-3. Rotate device sym key
-4. Others see mutation → stop polling removed device
-
-## Group Member Removal
-
-1. Create member removal mutation
-2. Rotate group sym key
-3. Distribute new key via PeerDirectory (remaining members only)
-4. Others stop polling removed member
 
 ## Malicious Actor
 
@@ -45,10 +30,3 @@ No technical rate limit. If someone spams overrides:
 - Their mutations are signed (identified)
 - Show UI warning
 - Remove from group or fork
-
-## Pairing Security
-
-- QR contains sensitive keys → show in trusted environment only
-- Temp IPNS key → single use, discard after
-- Emoji verification → prevents MITM
-- If QR compromised: emoji won't match, no data leak

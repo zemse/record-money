@@ -36,7 +36,7 @@ type ProviderConfig =
 8. **A verifies emojis match** with B
 9. **A migrates solo data** (if first pair): seal existing records as mutations
 10. **A fetches B's manifest**, derives shared secret, decrypts B's sym key
-11. **A imports B's database**, handles conflicts
+11. **A imports B's database**, handles conflicts (if both had solo data, use conflict resolution UI)
 12. **A updates own manifest**, adds B to DeviceRing
 13. **B polls A's IPNS**, finds self in DeviceRing, imports A's data
 14. **Done**, both now sync continuously

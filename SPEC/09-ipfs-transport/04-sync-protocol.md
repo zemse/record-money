@@ -118,10 +118,6 @@ C can get A's changes via B without waiting for A.
 
 **Note:** Storage grows linearly with total mutations across all users. Consider adding compaction in future (snapshot + prune old mutations).
 
-## Malformed Content
-
-If verification fails: stop pulling from device, show UI warning with device/owner name, handle socially.
-
 ## Full Resync (fallback)
 
 If mutations sync fails: fetch full database, merge or overwrite (user choice).

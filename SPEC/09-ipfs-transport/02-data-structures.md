@@ -2,6 +2,8 @@
 
 All data on IPFS is public. Everything must be encrypted.
 
+**Database vs Mutations:** Database is current state. Mutations are ordered updates. Applying all mutations from start produces the same state (intentional redundancy for sync reliability).
+
 ## DeviceManifest (IPNS root)
 
 ```typescript
@@ -41,11 +43,11 @@ Note: DeviceRing is typically small (2-5 devices), so trying all entries is fast
 ```typescript
 {
   entries: [{
-    ciphertext  // ECDH encrypted, contains:
+    ciphertext  // ECDH encrypted per-person, contains:
     // {
-    //   friendDevices: [{authPubKey, ipnsPubKey}],
-    //   selfDevices: [{authPubKey, ipnsPubKey}],  // for friend to discover my devices
-    //   sharedGroups: [{cid, symmetricKey}]
+    //   peerDevices: [{authPubKey, ipnsPubKey}],
+    //   selfDevices: [{authPubKey, ipnsPubKey}],  // for peer to discover my devices
+    //   sharedGroups: [{groupId, symmetricKey}]
     // }
   }]
 }
@@ -71,7 +73,7 @@ One chunk per ~100 mutations. Chunk itself is encrypted to hide mutation IDs.
 // Entire manifest is encrypted with group sym key
 // Decrypts to:
 {
-  database: { records, members },
+  database: { records, people },
   mutationIndex: [{startId, endId, cid}],  // cids point to encrypted group MutationChunks
   currentMutationId
 }
@@ -79,14 +81,14 @@ One chunk per ~100 mutations. Chunk itself is encrypted to hide mutation IDs.
 
 Group MutationChunks are also encrypted with group sym key.
 
-## GroupMember
+## Person (Group Member)
 
-Part of GroupManifest.database.members (encrypted within GroupManifest):
+Part of GroupManifest.database.people (encrypted within GroupManifest):
 
 ```typescript
 {
   uuid, name, email?,
-  devices: [{authPublicKey, ipnsPublicKey}],
+  devices: [{authPublicKey, ipnsPublicKey}],  // self-managed, peers use PeerDirectory
   addedAt, addedBy
 }
 ```
