@@ -46,9 +46,19 @@ Encrypted entirely with Broadcast Key. Peers can decrypt to discover devices to 
   devices: [{
     authPublicKey: Uint8Array,   // 65-byte uncompressed P-256 public key
     ipnsPublicKey: Uint8Array,   // 32-byte Ed25519 public key
-    lastSyncedId: number         // last mutation ID synced from this device
+    lastSyncedId: number         // highest mutation ID verified & stored from this device
   }]
 }
+```
+
+**`lastSyncedId` semantics:**
+- Means "verified signature and stored locally" (not just downloaded)
+- Bad mutations (invalid signature, malformed) are skipped, don't block sync
+- Used to fetch next batch: request mutations from `lastSyncedId + 1`
+
+```typescript
+// Example: fetched mutations 45-50, mutation 47 has bad signature
+// Result: store 45, 46, 48, 49, 50 (skip 47), lastSyncedId = 50
 ```
 
 **How it works:**

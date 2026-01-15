@@ -112,8 +112,9 @@ Each device maintains its own mutation sequence:
 
 **Why no global order?**
 - Devices can be offline for arbitrary periods
-- Clock drift between devices makes timestamps unreliable for ordering
-- Causal ordering per-device is sufficient for conflict detection
+- `id` is per-device, not comparable across devices
+
+**Cross-device ordering:** When mutations from different devices need ordering (e.g., replay, conflict detection), sort by `timestamp`. Clock drift may cause imperfect ordering, but this is acceptable for a high-trust environment.
 
 ### Publishing When Online
 

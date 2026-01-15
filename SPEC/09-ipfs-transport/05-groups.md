@@ -111,9 +111,16 @@ Note: Group symmetric key NOT included in link for security.
 
 Inviter simply does not approve (doesn't add to PeerDirectory). Temp IPNS response is ignored.
 
+### Invite link validity
+
+- Links do not expire - valid until used or manually cancelled
+- Inviter polls temp IPNS every 30-60 seconds for response
+- Pending invites stored locally, polling continues across app restarts
+- To cancel: inviter deletes pending invite from UI (stops polling, discards temp key)
+
 ### Invite link security
 
-- Temp IPNS key is single-use, discard after
+- Temp IPNS key is single-use, discard after successful pairing
 - Emoji verification prevents link interception attacks
 - If link is compromised: emojis won't match, no group access granted
 
@@ -226,6 +233,8 @@ A member can voluntarily leave a group.
 A special group containing only the user themselves:
 - Has its own Group Key (like any group)
 - Only self devices are members
-- Not shared with peers
+- Not shared with peers (synced only across user's own devices)
 - Displayed as "Personal Ledger" in UI (other groups shown as "Group Ledgers")
 - Used for personal expense tracking that doesn't involve others
+
+**Creation:** Personal Ledger is automatically created on account setup (first device initialization). The user is added as the sole member with `isSelf: true`.

@@ -184,6 +184,13 @@ When user tries to use a new feature:
 - If their client supports it: sync normally
 - If not: "update required" prompt
 
+### Member Removed During Upgrade
+
+- Removed member's proposal is discarded
+- Activation checks current membership (people list at execution time)
+- If remaining members have all proposed: activates immediately
+- Example: 3 members, Alice/Bob proposed, Carol removed → Alice+Bob = all current members → activates
+
 ### No Upgrade Possible
 
 If `min(proposals) == group.protocolVersion`:
