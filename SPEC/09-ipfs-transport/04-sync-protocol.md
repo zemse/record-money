@@ -64,6 +64,145 @@ function createMutation(targetType, data) {
 
 ---
 
+## Offline Handling
+
+The app is offline-first. All changes work locally and sync when connectivity is available.
+
+### Mutation Queue
+
+Mutations are stored locally in IndexedDB before publishing:
+
+```typescript
+// IndexedDB store for pending mutations
+db.version(N).stores({
+  mutationQueue: 'id, status',  // status: 'pending' | 'published'
+  ...
+});
+```
+
+**Creating mutations (offline or online):**
+1. User makes a change
+2. Create mutation with next local `id` (per-device incremental)
+3. Sign mutation
+4. Store in `mutationQueue` with `status: 'pending'`
+5. Apply to local database immediately
+6. If online: trigger publish
+
+### Per-Device Ordering
+
+Each device maintains its own mutation sequence:
+- `id` field is per-device incremental (1, 2, 3, ...)
+- No global ordering across devices
+- Other devices track `lastSyncedId` per device they sync with
+
+```typescript
+// DeviceRing tracks sync progress per device
+{
+  devices: [{
+    ...
+    lastSyncedIdEncrypted  // "I've seen mutations 1-47 from this device"
+  }]
+}
+```
+
+**Why no global order?**
+- Devices can be offline for arbitrary periods
+- Clock drift between devices makes timestamps unreliable for ordering
+- Causal ordering per-device is sufficient for conflict detection
+
+### Publishing When Online
+
+When device comes online (or is already online):
+
+```typescript
+async function publishPendingMutations() {
+  const pending = await db.mutationQueue
+    .where('status').equals('pending')
+    .sortBy('id');
+
+  if (pending.length === 0) return;
+
+  // Add to mutation chunks
+  for (const mutation of pending) {
+    appendToCurrentChunk(mutation);
+  }
+
+  // Upload and publish
+  await uploadNewChunks();
+  await updateManifest();
+  await publishToIpns();
+
+  // Mark as published
+  await db.mutationQueue
+    .where('status').equals('pending')
+    .modify({ status: 'published' });
+}
+```
+
+### Sync After Being Offline
+
+When device reconnects after being offline:
+
+1. **Publish own pending mutations** first
+2. **Poll other devices** for their new mutations
+3. **For each device**, compare their `currentMutationId` with our `lastSyncedIdForThem`
+4. **Fetch new mutations** from their mutation index
+5. **Check for conflicts** with our pending/published mutations
+6. **Auto-merge** non-conflicting changes
+7. **Queue conflicts** for user resolution
+8. **Update** `lastSyncedId` for each device
+
+### Conflict Scenarios
+
+**Both devices offline, both edit same field:**
+```
+Device A (offline): amount 100 → 150, creates mutation id=5
+Device B (offline): amount 100 → 200, creates mutation id=8
+Both come online...
+A publishes id=5, B publishes id=8
+A polls B, sees id=8 conflicts with own id=5
+→ Conflict UI shown to user
+```
+
+**Different fields edited offline (no conflict):**
+```
+Device A (offline): amount 100 → 150
+Device B (offline): title "Lunch" → "Team Lunch"
+Both come online...
+→ Auto-merge: both changes applied
+```
+
+### Edge Cases
+
+**Removed while offline:**
+- Device A removes Device B while B is offline
+- B creates mutations offline, stores in local queue
+- B comes online:
+  - B can still publish pending mutations to own IPNS (local data preserved)
+  - B cannot decrypt A's new data (key was rotated)
+  - A ignores B's IPNS (A stopped polling B after removal)
+  - UI on B shows: "Sync failed - cannot decrypt. You may have been removed."
+- B's local data remains intact and usable in solo mode
+- If removal was accidental, B can re-pair and merge data
+
+**Large offline queue:**
+- Device offline for weeks with many changes
+- On reconnect: batch publish in chunks
+- Show progress indicator
+- Handle conflicts incrementally
+
+**App killed while offline:**
+- Mutations in IndexedDB `mutationQueue` survive app restart
+- On next launch: check queue, publish when online
+
+**Network flaky:**
+- Publish fails mid-upload
+- Retry with exponential backoff
+- Mutations stay in queue until successfully published
+- Idempotent: re-uploading same mutation is safe (dedupe by uuid)
+
+---
+
 ## Polling
 
 Adaptive polling based on app state:
