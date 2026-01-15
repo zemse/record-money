@@ -32,7 +32,8 @@
 - [ ] Temp IPNS handshake
 - [ ] Emoji verification
 - [ ] DeviceRing update
-- [ ] Fresh sync start (no data migration)
+- [ ] Solo data migration (seal existing records as mutations)
+- [ ] Migration progress UI for large datasets
 
 ## 8.6 Sync Engine
 - [ ] Adaptive polling (15s foreground, 5min background)

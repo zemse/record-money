@@ -5,10 +5,38 @@
 When sync is not enabled (no devices paired):
 - Records stored directly in IndexedDB (no mutations)
 - No signing, no mutation log
-- On first device pair: existing data NOT migrated to sync
-- User starts fresh with sync - old local data remains accessible but separate
 
-Rationale: Keeps solo usage simple, avoids migration complexity.
+## Migration on First Pair
+
+When user pairs their first device, existing solo data is automatically migrated:
+
+1. **Seal existing records**: Generate `create` mutation for each existing record
+2. **Batch sign**: Sign all mutations with device signing key
+3. **Assign IDs**: Mutations get sequential IDs starting from 1
+4. **Publish**: Include sealed mutations in initial manifest
+5. **Sync**: Other device receives all sealed data as normal mutations
+
+```typescript
+// Migration pseudocode
+for (const record of existingSoloRecords) {
+  const mutation = {
+    uuid: generateUUID(),
+    id: nextMutationId++,
+    kind: 'create',
+    recordType: 'record',
+    dataNew: record,
+    timestamp: Date.now(),
+    authorDevicePublicKey: deviceAuthPublicKey
+  };
+  sign(mutation);
+  mutations.push(mutation);
+}
+```
+
+**Edge cases:**
+- Large dataset (1000+ records): Show progress indicator, batch in chunks
+- Migration happens only once per user (tracked in device settings)
+- If pairing fails mid-migration: rollback, retry on next pair attempt
 
 ---
 

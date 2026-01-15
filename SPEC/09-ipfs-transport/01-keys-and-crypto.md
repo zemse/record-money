@@ -1,19 +1,34 @@
 # Keys & Crypto
 
+## Algorithms
+
+| Purpose | Algorithm | Notes |
+|---------|-----------|-------|
+| Signing | ECDSA P-256 (secp256r1) | SecureEnclave/WebCrypto compatible |
+| Key exchange | ECDH P-256 | Derives shared secret between devices |
+| Symmetric encryption | AES-256-GCM | Authenticated encryption, 96-bit IV |
+| Key derivation | HKDF-SHA256 | Derive AES key from ECDH shared secret |
+| Hashing | SHA-256 | Mutation signatures, emoji derivation |
+| IPNS keys | Ed25519 | Required by IPFS/IPNS |
+| UUID | UUIDv4 | Mutation and record identifiers |
+
 ## Per Device
 
-| Key | Purpose |
-|-----|---------|
-| Signing keypair (P-256) | Sign mutations, SecureEnclave compatible |
-| IPNS keypair (Ed25519) | Publish to own feed |
-| Symmetric key (AES-256-GCM) | Encrypt content |
+| Key | Algorithm | Purpose |
+|-----|-----------|---------|
+| Signing keypair | ECDSA P-256 | Sign mutations, SecureEnclave compatible |
+| IPNS keypair | Ed25519 | Publish to own IPNS feed |
+| Symmetric key | AES-256-GCM (256-bit) | Encrypt device content |
 
 ## Key Sharing
 
 Device A shares sym key with Device B:
-1. `sharedSecret = ECDH(A.private, B.public)`
-2. Encrypt sym key with sharedSecret
-3. Publish in DeviceRing
+1. `sharedSecret = ECDH(A.private, B.public)` → 256-bit raw shared secret
+2. `aesKey = HKDF-SHA256(sharedSecret, salt="recordmoney-key-share", info="")` → 256-bit AES key
+3. `ciphertext = AES-256-GCM(aesKey, iv=random96bit, plaintext=symKey)`
+4. Publish ciphertext in DeviceRing
+
+Decryption with wrong key → AES-GCM auth tag fails → throws error (not garbage)
 
 ## Rotation
 
@@ -48,15 +63,27 @@ Provider config stored in device settings.
 
 ```typescript
 {
-  uuid: string,              // global unique
+  uuid: string,              // UUIDv4
   id: number,                // per-device incremental
   kind: 'create'|'update'|'delete'|'override',
   recordType: 'record'|'device'|'user'|'member'|'group',
-  targetUuid?: string,
+  targetUuid?: string,       // UUIDv4 of target record (for update/delete/override)
   dataOld?: any,
   dataNew?: any,
-  timestamp: number,
-  authorDevicePublicKey: Uint8Array,
-  signature: Uint8Array      // ECDSA over hash of above
+  timestamp: number,         // Unix ms
+  authorDevicePublicKey: Uint8Array,  // 65-byte uncompressed P-256 public key
+  signature: Uint8Array      // 64-byte ECDSA P-256 signature (r || s)
 }
 ```
+
+**Signing process:**
+1. Build mutation object (without signature field)
+2. Serialize to canonical JSON (sorted keys, no whitespace)
+3. `hash = SHA-256(canonicalJson)`
+4. `signature = ECDSA-P256-Sign(devicePrivateKey, hash)`
+
+**Verification:**
+1. Extract signature, rebuild mutation without it
+2. Serialize to canonical JSON
+3. `hash = SHA-256(canonicalJson)`
+4. `valid = ECDSA-P256-Verify(authorDevicePublicKey, hash, signature)`
