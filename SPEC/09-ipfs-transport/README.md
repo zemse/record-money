@@ -26,8 +26,12 @@ Groups: each member publishes own feed, all poll all.
 
 ## Terms
 
-- **DeviceManifest**: top-level IPNS content
-- **Mutation**: signed change entry
-- **DeviceRing**: user's linked devices
-- **PeerDirectory**: peers + shared groups
-- **Person**: group member (user/member/friend unified terminology)
+- **DeviceManifest**: top-level IPNS content (database, mutations, device ring, peer directory)
+- **Mutation**: signed change entry (create, update, delete, merge, exit)
+- **DeviceRing**: user's linked devices (encrypted with Broadcast Key)
+- **PeerDirectory**: key distribution + group sharing (ECDH encrypted per-recipient)
+- **GroupManifest**: group data + membership (encrypted with Group Key)
+- **Person**: individual in database (user/member/contact unified terminology)
+- **Personal Key**: encrypts personal data (self devices only)
+- **Broadcast Key**: encrypts DeviceRing (self devices + peers)
+- **Group Key**: encrypts GroupManifest (group members)

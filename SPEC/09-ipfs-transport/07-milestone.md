@@ -2,6 +2,8 @@
 
 ## 8.1 Crypto Foundation
 - [ ] P-256 keygen, ECDH, AES-GCM helpers
+- [ ] Ed25519 keygen for IPNS
+- [ ] Personal Key + Broadcast Key generation
 - [ ] Mutation signing/verification
 - [ ] Canonical JSON
 
@@ -31,6 +33,7 @@
 - [ ] QR gen/scan with provider config
 - [ ] Temp IPNS handshake
 - [ ] Emoji verification
+- [ ] PeerDirectory update (share Personal Key + Broadcast Key)
 - [ ] DeviceRing update
 - [ ] Solo data migration (seal existing records as mutations)
 - [ ] Migration progress UI for large datasets
@@ -59,15 +62,16 @@
 - [ ] Full replication of imported mutations
 
 ## 8.9 Groups
-- [ ] Create group
-- [ ] Invite existing friend (PeerDirectory)
-- [ ] Invite link generation (without symmetric key)
+- [ ] Create group (Group Key generation, group mutation)
+- [ ] Personal Ledger (special self-only group)
+- [ ] Invite existing peer (PeerDirectory)
+- [ ] Invite link generation (without Group Key)
 - [ ] Join request flow
 - [ ] Invite approval UI
-- [ ] Group sync
+- [ ] Group sync (GroupManifest polling)
 - [ ] Member add/remove
 - [ ] Key rotation (event-based only)
-- [ ] Close group
+- [ ] Exit group (voluntary departure with archived data)
 
 ## 8.10 Security
 - [ ] Device removal + key rotation
