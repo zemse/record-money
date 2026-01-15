@@ -306,31 +306,7 @@ interface ResolveConflictOp {
 
 ### Replay Algorithm
 
-When building state from mutations (fresh device or rebuild):
-
-```typescript
-function replayMutations(mutations: Mutation[]): Database {
-  // Step 1: Collect all voided mutation UUIDs
-  const voidedUuids = new Set<string>();
-  for (const mut of mutations) {
-    if (mut.operation.type === 'resolve_conflict') {
-      for (const uuid of mut.operation.voidedMutationUuids) {
-        voidedUuids.add(uuid);
-      }
-    }
-  }
-
-  // Step 2: Replay mutations, skipping voided ones
-  const db = emptyDatabase();
-  for (const mut of sortedByDeviceAndId(mutations)) {
-    if (voidedUuids.has(mut.uuid)) {
-      continue;  // This mutation was voided by a conflict resolution
-    }
-    applyMutation(db, mut);
-  }
-  return db;
-}
-```
+Collect all `voidedMutationUuids` from ResolveConflict mutations into a set. Replay mutations sorted by `timestamp`, skipping any in the voided set.
 
 ### Conflict Types
 
@@ -379,56 +355,13 @@ Person-2 is being merged into person-1, but also being updated.
 - Option 2: "Complete merge, apply updates to [Person 1] instead"
 - Option 3: "Cancel merge, keep [Person 2] with updates"
 
-### UI Flow
+### Resolution Flow
 
-**Binary conflict (2 devices):**
-- Show both values + timestamps + authors
-- User picks: Keep Mine | Keep Theirs
-- Creates ResolveConflict mutation voiding the loser
-
-**Multi-device conflict (3+ devices):**
-- Show all conflicting values side-by-side
-- Display for each: value, timestamp, author device name
-- User picks one value as winner
-- Creates ResolveConflict mutation voiding all losers
-
-**Bulk conflicts:** Scroll UI, swipe left/right to choose per field. Single "Apply All" creates one ResolveConflict per conflict.
-
-**Auto-merge:** When no conflicts exist (different fields changed), apply all changes automatically without user intervention. No ResolveConflict needed.
+User selects winner, system creates ResolveConflict mutation voiding losers. Auto-merge when no conflicts (different fields changed).
 
 ### Conflicting Resolutions
 
-Two devices may resolve the same conflict differently:
-
-```
-Device A: ResolveConflict { winnerMutationUuid: "mut-X", voidedMutationUuids: ["mut-Y"] }
-Device B: ResolveConflict { winnerMutationUuid: "mut-Y", voidedMutationUuids: ["mut-X"] }
-```
-
-**Detection:** When importing a ResolveConflict, check if any of its `voidedMutationUuids` is the `winnerMutationUuid` in an existing ResolveConflict (or vice versa).
-
-**Resolution:** Treat as a conflict requiring user input.
-
-**UI:** "Two devices resolved a conflict differently. Which resolution should be used?"
-- Show original conflict context (the field/record involved)
-- Show both resolution choices with author device names
-- User picks which resolution wins
-
-**Result:** Create a new ResolveConflict that voids the losing ResolveConflict mutation:
-```typescript
-{
-  operation: {
-    type: 'resolve_conflict',
-    conflictType: 'field',  // or original conflict type
-    winnerMutationUuid: "resolve-A",  // the winning resolution
-    voidedMutationUuids: ["resolve-B", "mut-Y"],  // losing resolution + its winner
-    targetUuid: "rec-001",
-    summary: "Accepted Device A's resolution, voided Device B's resolution"
-  }
-}
-```
-
-**Replay behavior:** The final ResolveConflict voids both the losing resolution AND the mutation that resolution had chosen as winner. This ensures consistent state.
+If two devices resolve the same conflict differently (A voids mut-X, B voids mut-Y), treat as meta-conflict requiring user resolution. Winner's ResolveConflict voids the loser's resolution and its chosen mutation.
 
 ## Capturing Old Values
 
