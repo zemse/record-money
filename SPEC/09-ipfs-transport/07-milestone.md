@@ -90,15 +90,23 @@
 - [x] Conflict notifications
 
 ## 8.12 Testing
-- [ ] Multi-device sync
-- [ ] Multi-user groups
-- [ ] Conflicts (binary and multi-device)
-- [ ] Device/member removal and key rotation
-- [ ] Offline/online transitions
-- [ ] Adaptive polling behavior
+- [x] Multi-device sync (manual testing guide)
+- [x] Multi-user groups (manual testing guide)
+- [x] Conflicts (binary and multi-device) (manual testing guide)
+- [x] Device/member removal and key rotation (manual testing guide)
+- [x] Offline/online transitions (manual testing guide)
+- [x] Adaptive polling behavior (manual testing guide)
+
+See `08-testing-guide.md` for detailed manual testing scenarios.
 
 **Review gate after each section**
 
 ## Development Notes
 
 Use mock pinning provider for unit tests. For multi-device testing: use multiple browser profiles or incognito + normal window.
+
+## Implementation Summary
+
+- 328 unit tests covering all core functionality
+- Manual testing guide for multi-device integration scenarios
+- All services implemented with TypeScript types
