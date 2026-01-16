@@ -36,9 +36,9 @@
 - [x] PeerDirectory update (share Personal Key + Broadcast Key)
 - [x] DeviceRing update
 - [x] Solo data migration (seal existing records as mutations)
-- [ ] QR generation and scanning UI
-- [ ] Emoji verification UI
-- [ ] Migration progress UI for large datasets
+- [x] QR generation and scanning UI
+- [x] Emoji verification UI
+- [x] Migration progress UI for large datasets
 
 ## 8.6 Sync Engine
 - [ ] Adaptive polling (15s foreground, 5min background)
@@ -84,7 +84,7 @@
 ## 8.11 UI
 - [ ] Sync status indicator with manual sync button
 - [ ] Device management
-- [ ] Pairing flow
+- [x] Pairing flow
 - [ ] Group members
 - [ ] Pending invite approvals
 - [ ] Conflict notifications
