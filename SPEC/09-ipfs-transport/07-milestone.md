@@ -69,7 +69,7 @@
 - [x] Invite existing peer (PeerDirectory)
 - [x] Invite link generation (without Group Key)
 - [x] Join request flow
-- [ ] Invite approval UI
+- [x] Invite approval UI
 - [x] Group sync (GroupManifest polling)
 - [x] Member add/remove
 - [x] Key rotation (event-based only)
@@ -83,10 +83,10 @@
 
 ## 8.11 UI
 - [x] Sync status indicator with manual sync button
-- [ ] Device management
+- [x] Device management
 - [x] Pairing flow
-- [ ] Group members
-- [ ] Pending invite approvals
+- [x] Group members
+- [x] Pending invite approvals
 - [x] Conflict notifications
 
 ## 8.12 Testing
