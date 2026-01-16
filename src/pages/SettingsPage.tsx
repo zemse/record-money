@@ -12,6 +12,7 @@ import {
 } from '../utils/deduplication'
 import { validateApiKey } from '../utils/claudeClient'
 import { EmojiPicker } from '../components/EmojiPicker'
+import { SyncSetup, SyncStatus } from '../components/SyncSetup'
 
 const themeOptions: { value: Theme; label: string; icon: string }[] = [
   { value: 'light', label: 'Light', icon: '☀️' },
@@ -50,6 +51,9 @@ export function SettingsPage() {
   const [showDuplicateFinder, setShowDuplicateFinder] = useState(false)
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([])
   const [scanningDuplicates, setScanningDuplicates] = useState(false)
+
+  // Sync setup state
+  const [showSyncSetup, setShowSyncSetup] = useState(false)
 
   const currentUser = users?.find((u) => u.email === settings?.currentUserEmail)
 
@@ -635,6 +639,16 @@ export function SettingsPage() {
             </div>
           )}
         </div>
+
+        {/* P2P Sync */}
+        {showSyncSetup ? (
+          <SyncSetup
+            onComplete={() => setShowSyncSetup(false)}
+            onCancel={() => setShowSyncSetup(false)}
+          />
+        ) : (
+          <SyncStatus onSetup={() => setShowSyncSetup(true)} />
+        )}
 
         {/* Data */}
         <div className="rounded-2xl border border-border-default bg-surface p-5">

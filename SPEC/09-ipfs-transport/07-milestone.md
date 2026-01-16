@@ -24,10 +24,10 @@
 - [x] Provider config storage
 
 ## 8.4 Device Setup
-- [ ] First-time setup UI
-- [ ] Provider selection and config input
-- [ ] Key generation
-- [ ] Initial manifest publish
+- [x] First-time setup UI
+- [x] Provider selection and config input
+- [x] Key generation
+- [x] Initial manifest publish
 
 ## 8.5 Device Pairing
 - [ ] QR gen/scan with provider config

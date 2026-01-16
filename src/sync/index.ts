@@ -161,6 +161,23 @@ export {
   isValidGroupManifest,
 } from './schemas'
 
+// Device setup
+export {
+  type DeviceSetupResult,
+  type DeviceSetupProgress,
+  type ProgressCallback,
+  ensureDeviceKeys,
+  getDeviceKeysAsBytes,
+  getDeviceVerificationEmojis,
+  configureProvider,
+  getConfiguredProvider,
+  setupDevice,
+  isDeviceSetUp,
+  hasDeviceKeys,
+  getSyncStatus,
+  resetSyncConfig,
+} from './device-setup'
+
 // IPFS provider module
 export {
   // Types
