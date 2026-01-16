@@ -121,6 +121,46 @@ export type {
   QueuedMutation,
 } from './types'
 
+// Schema serialization and encryption
+export {
+  // DeviceManifest
+  type SerializedDeviceManifest,
+  createDeviceManifest,
+  serializeDeviceManifest,
+  deserializeDeviceManifest,
+  decryptDeviceManifest,
+  // DeviceRing
+  createEncryptedDeviceRing,
+  decryptDeviceRing,
+  createDeviceRingEntry,
+  // PeerDirectory
+  type SerializedPeerDirectory,
+  createPeerDirectoryEntry,
+  decryptPeerDirectoryEntry,
+  createSerializedPeerDirectory,
+  serializePeerDirectory,
+  deserializePeerDirectory,
+  findAndDecryptPeerDirectoryEntry,
+  // GroupManifest
+  createEncryptedGroupManifest,
+  decryptGroupManifest,
+  createGroupManifest,
+  // MutationChunks
+  createEncryptedMutationChunk,
+  decryptMutationChunk,
+  findChunksToSync,
+  createMutationChunk,
+  // Database
+  type PersonalDatabase,
+  createEncryptedDatabase,
+  decryptDatabase,
+  // Validation
+  isValidDeviceManifest,
+  isValidDeviceRing,
+  isValidPeerDirectoryPayload,
+  isValidGroupManifest,
+} from './schemas'
+
 // IPFS provider module
 export {
   // Types

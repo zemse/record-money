@@ -18,8 +18,8 @@
 - [x] Unpin old CIDs
 
 ## 8.3 Data Structures
-- [ ] DeviceManifest, DeviceRing, PeerDirectory schemas
-- [ ] Mutation, GroupManifest schemas
+- [x] DeviceManifest, DeviceRing, PeerDirectory schemas
+- [x] Mutation, GroupManifest schemas
 - [x] IndexedDB updates for sync metadata
 - [x] Provider config storage
 
