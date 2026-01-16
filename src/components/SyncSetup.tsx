@@ -484,9 +484,10 @@ export function SyncSetup({ onComplete, onCancel }: SyncSetupProps) {
 
 interface SyncStatusProps {
   onSetup?: () => void
+  onPairDevice?: () => void
 }
 
-export function SyncStatus({ onSetup }: SyncStatusProps) {
+export function SyncStatus({ onSetup, onPairDevice }: SyncStatusProps) {
   const [status, setStatus] = useState<{
     mode: 'solo' | 'synced' | 'not_configured'
     deviceId?: string
@@ -547,6 +548,17 @@ export function SyncStatus({ onSetup }: SyncStatusProps) {
         )}
 
         <div className="mt-4 border-t border-border-default pt-4">
+          {onPairDevice && (
+            <button
+              onClick={onPairDevice}
+              className="mb-4 w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-primary-hover"
+            >
+              Pair Another Device
+            </button>
+          )}
+        </div>
+
+        <div className="border-t border-border-default pt-4">
           {showResetConfirm ? (
             <div className="space-y-3">
               <p className="text-sm text-red-600 dark:text-red-400">

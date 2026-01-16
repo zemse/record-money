@@ -13,6 +13,7 @@ import {
 import { validateApiKey } from '../utils/claudeClient'
 import { EmojiPicker } from '../components/EmojiPicker'
 import { SyncSetup, SyncStatus } from '../components/SyncSetup'
+import { DevicePairing } from '../components/DevicePairing'
 
 const themeOptions: { value: Theme; label: string; icon: string }[] = [
   { value: 'light', label: 'Light', icon: '☀️' },
@@ -54,6 +55,7 @@ export function SettingsPage() {
 
   // Sync setup state
   const [showSyncSetup, setShowSyncSetup] = useState(false)
+  const [showDevicePairing, setShowDevicePairing] = useState(false)
 
   const currentUser = users?.find((u) => u.email === settings?.currentUserEmail)
 
@@ -641,13 +643,21 @@ export function SettingsPage() {
         </div>
 
         {/* P2P Sync */}
-        {showSyncSetup ? (
+        {showDevicePairing ? (
+          <DevicePairing
+            onComplete={() => setShowDevicePairing(false)}
+            onCancel={() => setShowDevicePairing(false)}
+          />
+        ) : showSyncSetup ? (
           <SyncSetup
             onComplete={() => setShowSyncSetup(false)}
             onCancel={() => setShowSyncSetup(false)}
           />
         ) : (
-          <SyncStatus onSetup={() => setShowSyncSetup(true)} />
+          <SyncStatus
+            onSetup={() => setShowSyncSetup(true)}
+            onPairDevice={() => setShowDevicePairing(true)}
+          />
         )}
 
         {/* Data */}
