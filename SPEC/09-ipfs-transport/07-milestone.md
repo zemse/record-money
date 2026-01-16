@@ -76,10 +76,10 @@
 - [x] Exit group (voluntary departure with archived data)
 
 ## 8.10 Security
-- [ ] Device removal + key rotation
-- [ ] Event-based key rotation (no time-based)
-- [ ] Malformed content handling
-- [ ] Fork group flow
+- [x] Device removal + key rotation
+- [x] Event-based key rotation (no time-based)
+- [x] Malformed content handling
+- [x] Fork group flow
 
 ## 8.11 UI
 - [x] Sync status indicator with manual sync button
