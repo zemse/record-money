@@ -428,8 +428,18 @@ describe('findPotentialDuplicates', () => {
 
     it('should detect similar titles (70-90%)', () => {
       const records = [
-        createRecord({ uuid: 'r1', amount: 100, date: '2024-01-15', title: 'Coffee at Starbucks Downtown' }),
-        createRecord({ uuid: 'r2', amount: 100, date: '2024-01-15', title: 'Coffee at Starbucks Uptown' }), // ~75% similar
+        createRecord({
+          uuid: 'r1',
+          amount: 100,
+          date: '2024-01-15',
+          title: 'Coffee at Starbucks Downtown',
+        }),
+        createRecord({
+          uuid: 'r2',
+          amount: 100,
+          date: '2024-01-15',
+          title: 'Coffee at Starbucks Uptown',
+        }), // ~75% similar
       ]
 
       const duplicates = findPotentialDuplicates(records)
@@ -441,7 +451,12 @@ describe('findPotentialDuplicates', () => {
     it('should not boost score for very different titles', () => {
       const records = [
         createRecord({ uuid: 'r1', amount: 100, date: '2024-01-15', title: 'Coffee' }),
-        createRecord({ uuid: 'r2', amount: 100, date: '2024-01-15', title: 'Groceries at Walmart' }),
+        createRecord({
+          uuid: 'r2',
+          amount: 100,
+          date: '2024-01-15',
+          title: 'Groceries at Walmart',
+        }),
       ]
 
       const duplicates = findPotentialDuplicates(records)

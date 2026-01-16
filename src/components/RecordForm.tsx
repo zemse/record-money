@@ -25,7 +25,10 @@ interface RecordFormProps {
   currentUserEmail?: string
   defaultAccountId?: string
   editingRecordId?: string
-  onSubmit: (data: Omit<ExpenseRecord, 'uuid' | 'createdAt' | 'updatedAt'>, recordId?: string) => void
+  onSubmit: (
+    data: Omit<ExpenseRecord, 'uuid' | 'createdAt' | 'updatedAt'>,
+    recordId?: string
+  ) => void
   onCancel: () => void
 }
 
@@ -120,12 +123,18 @@ export function RecordForm({
     if (comments !== initialData.comments) return true
 
     // Compare paidBy emails
-    const initialPaidByEmails = initialData.paidBy.map((p) => p.email).sort().join(',')
+    const initialPaidByEmails = initialData.paidBy
+      .map((p) => p.email)
+      .sort()
+      .join(',')
     const currentPaidByEmails = paidByEmails.sort().join(',')
     if (currentPaidByEmails !== initialPaidByEmails) return true
 
     // Compare paidFor emails
-    const initialPaidForEmails = initialData.paidFor.map((p) => p.email).sort().join(',')
+    const initialPaidForEmails = initialData.paidFor
+      .map((p) => p.email)
+      .sort()
+      .join(',')
     const currentPaidForEmails = paidForEmails.sort().join(',')
     if (currentPaidForEmails !== initialPaidForEmails) return true
 
@@ -540,7 +549,9 @@ export function RecordForm({
                 {/* Amount inputs for selected accounts */}
                 {accountPayments.length > 0 && (
                   <div className="space-y-2 rounded-xl bg-surface-tertiary p-3">
-                    <p className="text-xs font-medium text-content-secondary">Amount from each account</p>
+                    <p className="text-xs font-medium text-content-secondary">
+                      Amount from each account
+                    </p>
                     {accountPayments.map((ap) => {
                       const acc = accounts.find((a) => a.id === ap.accountId)
                       if (!acc) return null

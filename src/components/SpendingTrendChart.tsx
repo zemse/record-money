@@ -16,11 +16,7 @@ interface SpendingTrendChartProps {
   period: 'week' | 'month' | 'year'
 }
 
-export function SpendingTrendChart({
-  records,
-  displayCurrency,
-  period,
-}: SpendingTrendChartProps) {
+export function SpendingTrendChart({ records, displayCurrency, period }: SpendingTrendChartProps) {
   // Determine date grouping based on period
   const getDateKey = (date: string): string => {
     const d = new Date(date)

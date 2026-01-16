@@ -1,11 +1,11 @@
 # Milestone 8: P2P Sync
 
 ## 8.1 Crypto Foundation
-- [ ] P-256 keygen, ECDH, AES-GCM helpers
-- [ ] Ed25519 keygen for IPNS
-- [ ] Personal Key + Broadcast Key generation
-- [ ] Mutation signing/verification
-- [ ] Canonical JSON
+- [x] P-256 keygen, ECDH, AES-GCM helpers
+- [x] Ed25519 keygen for IPNS
+- [x] Personal Key + Broadcast Key generation
+- [x] Mutation signing/verification
+- [x] Canonical JSON
 
 ## 8.2 IPFS Integration
 - [ ] Pluggable pinning provider interface

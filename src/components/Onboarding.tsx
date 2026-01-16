@@ -210,12 +210,11 @@ export function Onboarding({ onComplete }: OnboardingProps) {
               className="mt-4 w-full rounded-xl border border-border-default bg-surface px-4 py-3 text-content transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
             />
 
-            {error && (
-              <p className="mt-2 text-sm text-red-500">{error}</p>
-            )}
+            {error && <p className="mt-2 text-sm text-red-500">{error}</p>}
 
             <p className="mt-3 text-xs text-content-tertiary">
-              {identifierType === 'email' && 'Your email helps others find you when splitting bills.'}
+              {identifierType === 'email' &&
+                'Your email helps others find you when splitting bills.'}
               {identifierType === 'phone' && 'Include country code for international use.'}
               {identifierType === 'crypto' && 'Use your ENS name or wallet address.'}
             </p>

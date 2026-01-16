@@ -465,12 +465,12 @@ export function SettingsPage() {
                   updateSettings({ enableAiMemory: !(settings?.enableAiMemory ?? true) })
                 }
                 className={`relative h-6 w-11 rounded-full transition-colors ${
-                  settings?.enableAiMemory ?? true ? 'bg-primary' : 'bg-content-tertiary'
+                  (settings?.enableAiMemory ?? true) ? 'bg-primary' : 'bg-content-tertiary'
                 }`}
               >
                 <span
                   className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                    settings?.enableAiMemory ?? true ? 'translate-x-5' : ''
+                    (settings?.enableAiMemory ?? true) ? 'translate-x-5' : ''
                   }`}
                 />
               </button>
@@ -478,9 +478,7 @@ export function SettingsPage() {
 
             {(settings?.enableAiMemory ?? true) && (
               <div className="mt-4">
-                <label className="block text-sm font-medium text-content">
-                  User Notes
-                </label>
+                <label className="block text-sm font-medium text-content">User Notes</label>
                 <p className="mt-1 text-xs text-content-tertiary">
                   Brief notes about your preferences, habits, or context the AI should remember
                 </p>
@@ -766,8 +764,8 @@ export function SettingsPage() {
                                   {record.icon} {record.title}
                                 </p>
                                 <p className="text-sm text-content-secondary">
-                                  {record.currency} {record.amount.toLocaleString()} •{' '}
-                                  {record.date} {record.time}
+                                  {record.currency} {record.amount.toLocaleString()} • {record.date}{' '}
+                                  {record.time}
                                 </p>
                                 {record.description && (
                                   <p className="mt-1 truncate text-xs text-content-tertiary">
@@ -830,9 +828,7 @@ export function SettingsPage() {
                                 </button>
                                 {group.records.length > 2 && (
                                   <button
-                                    onClick={() =>
-                                      handleDeleteFromGroup(groupIndex, record.uuid)
-                                    }
+                                    onClick={() => handleDeleteFromGroup(groupIndex, record.uuid)}
                                     className="rounded-lg bg-red-100 px-2 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-200 dark:bg-red-500/20 dark:text-red-400 dark:hover:bg-red-500/30"
                                     title="Delete this record"
                                   >
