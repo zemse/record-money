@@ -177,3 +177,30 @@ export interface PeerSyncState {
   lastAttemptedAt?: number // timestamp of last sync attempt
   consecutiveFailures: number // for backoff calculation
 }
+
+/**
+ * Conflict option representing one device's value
+ */
+export interface ConflictOption {
+  mutationUuid: string
+  deviceId: string
+  deviceName?: string
+  value: unknown
+  timestamp: number
+}
+
+/**
+ * Stored conflict for resolution
+ */
+export interface StoredConflict {
+  id: string // unique conflict ID (primary key)
+  type: 'field' | 'delete_vs_update' | 'merge_vs_update'
+  targetUuid: string
+  targetType: 'record' | 'person' | 'group'
+  field?: string // for field conflicts
+  options: ConflictOption[] // 2+ options to choose from
+  detectedAt: number
+  resolvedAt?: number
+  winnerMutationUuid?: string
+  status: 'pending' | 'resolved'
+}

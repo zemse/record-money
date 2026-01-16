@@ -11,6 +11,7 @@ import type {
   SyncConfig,
   QueuedMutation,
   PeerSyncState,
+  StoredConflict,
 } from '../types'
 import { DEFAULT_GROUP_UUID } from '../types'
 import { DEFAULT_CATEGORIES } from '../constants/categories'
@@ -28,6 +29,7 @@ const db = new Dexie('RecordMoney') as Dexie & {
   syncConfig: EntityTable<SyncConfig, 'key'>
   mutationQueue: EntityTable<QueuedMutation, 'id'>
   peerSyncState: EntityTable<PeerSyncState, 'deviceId'>
+  conflicts: EntityTable<StoredConflict, 'id'>
 }
 
 db.version(1).stores({
@@ -78,6 +80,23 @@ db.version(5).stores({
   syncConfig: 'key',
   mutationQueue: '++id, status',
   peerSyncState: 'deviceId',
+})
+
+// Version 6: Add conflicts table
+db.version(6).stores({
+  records: 'uuid, groupId, date, category, sourceHash, account',
+  users: 'email',
+  groups: 'uuid',
+  settings: 'key',
+  exchangeRates: 'key',
+  categories: 'id, name, isSystem',
+  accounts: 'id, name',
+  // Sync tables
+  deviceKeys: 'key',
+  syncConfig: 'key',
+  mutationQueue: '++id, status',
+  peerSyncState: 'deviceId',
+  conflicts: 'id, status, targetUuid',
 })
 
 export { db }
