@@ -41,17 +41,17 @@
 - [x] Migration progress UI for large datasets
 
 ## 8.6 Sync Engine
-- [ ] Adaptive polling (15s foreground, 5min background)
-- [ ] Manual sync button
-- [ ] Page visibility detection (pause when hidden)
-- [ ] Rate limit backoff
-- [ ] Change detection
-- [ ] Mutation fetch/verify/apply
-- [ ] Dedup by uuid
-- [ ] Sync state tracking
+- [x] Adaptive polling (15s foreground, 5min background)
+- [x] Manual sync button
+- [x] Page visibility detection (pause when hidden)
+- [x] Rate limit backoff
+- [x] Change detection
+- [x] Mutation fetch/verify/apply
+- [x] Dedup by uuid
+- [x] Sync state tracking
 
 ## 8.7 Conflict Resolution
-- [ ] Conflict detection
+- [x] Conflict detection
 - [ ] Binary conflict UI (2 devices)
 - [ ] Multi-device conflict UI (3+ devices, show all values)
 - [ ] Bulk scroll UI
@@ -82,7 +82,7 @@
 - [ ] Fork group flow
 
 ## 8.11 UI
-- [ ] Sync status indicator with manual sync button
+- [x] Sync status indicator with manual sync button
 - [ ] Device management
 - [x] Pairing flow
 - [ ] Group members
