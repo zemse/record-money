@@ -30,12 +30,14 @@
 - [x] Initial manifest publish
 
 ## 8.5 Device Pairing
-- [ ] QR gen/scan with provider config
-- [ ] Temp IPNS handshake
-- [ ] Emoji verification
-- [ ] PeerDirectory update (share Personal Key + Broadcast Key)
-- [ ] DeviceRing update
-- [ ] Solo data migration (seal existing records as mutations)
+- [x] QR gen/scan with provider config (backend)
+- [x] Temp IPNS handshake (backend)
+- [x] Emoji verification (backend)
+- [x] PeerDirectory update (share Personal Key + Broadcast Key)
+- [x] DeviceRing update
+- [x] Solo data migration (seal existing records as mutations)
+- [ ] QR generation and scanning UI
+- [ ] Emoji verification UI
 - [ ] Migration progress UI for large datasets
 
 ## 8.6 Sync Engine

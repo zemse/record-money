@@ -212,3 +212,32 @@ export {
   getProviderDisplayName,
   getAvailableProviders,
 } from './ipfs'
+
+// Device pairing
+export {
+  type PairingQRPayload,
+  type PairingResponse,
+  type PairingSession,
+  type PairingState,
+  type PairingProgress,
+  type PairingProgressCallback,
+  generatePairingQR,
+  serializeQRPayload,
+  parseQRPayload,
+  initiateJoining,
+  pollForResponse,
+  confirmPairing,
+  pollForKeys,
+  isSessionValid,
+  getStateMessage,
+} from './pairing'
+
+// Data migration
+export {
+  type MigrationProgress,
+  type MigrationProgressCallback,
+  type MigrationResult,
+  migrateSoloData,
+  getMigrationStats,
+  needsMigration,
+} from './migration'
