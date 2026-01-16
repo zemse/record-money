@@ -58,10 +58,10 @@
 - [x] Override mutation creation
 
 ## 8.8 Publishing
-- [ ] Mutation creation on local CRUD
-- [ ] Mutations management
-- [ ] Manifest rebuild + publish
-- [ ] Full replication of imported mutations
+- [x] Mutation creation on local CRUD
+- [x] Mutations management
+- [x] Manifest rebuild + publish
+- [x] Full replication of imported mutations
 
 ## 8.9 Groups
 - [ ] Create group (Group Key generation, group mutation)
