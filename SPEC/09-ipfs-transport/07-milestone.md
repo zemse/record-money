@@ -64,16 +64,16 @@
 - [x] Full replication of imported mutations
 
 ## 8.9 Groups
-- [ ] Create group (Group Key generation, group mutation)
-- [ ] Personal Ledger (special self-only group)
-- [ ] Invite existing peer (PeerDirectory)
-- [ ] Invite link generation (without Group Key)
-- [ ] Join request flow
+- [x] Create group (Group Key generation, group mutation)
+- [x] Personal Ledger (special self-only group)
+- [x] Invite existing peer (PeerDirectory)
+- [x] Invite link generation (without Group Key)
+- [x] Join request flow
 - [ ] Invite approval UI
-- [ ] Group sync (GroupManifest polling)
-- [ ] Member add/remove
-- [ ] Key rotation (event-based only)
-- [ ] Exit group (voluntary departure with archived data)
+- [x] Group sync (GroupManifest polling)
+- [x] Member add/remove
+- [x] Key rotation (event-based only)
+- [x] Exit group (voluntary departure with archived data)
 
 ## 8.10 Security
 - [ ] Device removal + key rotation

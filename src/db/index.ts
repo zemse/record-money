@@ -12,6 +12,9 @@ import type {
   QueuedMutation,
   PeerSyncState,
   StoredConflict,
+  StoredGroupKey,
+  StoredPerson,
+  PendingInvite,
 } from '../types'
 import { DEFAULT_GROUP_UUID } from '../types'
 import { DEFAULT_CATEGORIES } from '../constants/categories'
@@ -30,6 +33,10 @@ const db = new Dexie('RecordMoney') as Dexie & {
   mutationQueue: EntityTable<QueuedMutation, 'id'>
   peerSyncState: EntityTable<PeerSyncState, 'deviceId'>
   conflicts: EntityTable<StoredConflict, 'id'>
+  // Group sync tables
+  groupKeys: EntityTable<StoredGroupKey, 'groupUuid'>
+  people: EntityTable<StoredPerson, 'uuid'>
+  pendingInvites: EntityTable<PendingInvite, 'id'>
 }
 
 db.version(1).stores({
@@ -97,6 +104,27 @@ db.version(6).stores({
   mutationQueue: '++id, status',
   peerSyncState: 'deviceId',
   conflicts: 'id, status, targetUuid',
+})
+
+// Version 7: Add group sync tables
+db.version(7).stores({
+  records: 'uuid, groupId, date, category, sourceHash, account',
+  users: 'email',
+  groups: 'uuid',
+  settings: 'key',
+  exchangeRates: 'key',
+  categories: 'id, name, isSystem',
+  accounts: 'id, name',
+  // Sync tables
+  deviceKeys: 'key',
+  syncConfig: 'key',
+  mutationQueue: '++id, status',
+  peerSyncState: 'deviceId',
+  conflicts: 'id, status, targetUuid',
+  // Group sync tables
+  groupKeys: 'groupUuid',
+  people: 'uuid, isSelf',
+  pendingInvites: 'id, groupUuid, status',
 })
 
 export { db }
@@ -452,4 +480,73 @@ export async function updatePeerSyncState(
 
 export async function getAllPeerSyncStates(): Promise<PeerSyncState[]> {
   return db.peerSyncState.toArray()
+}
+
+// ============================================================================
+// Group sync helpers
+// ============================================================================
+
+// Group keys
+export async function getGroupKey(groupUuid: string): Promise<StoredGroupKey | undefined> {
+  return db.groupKeys.get(groupUuid)
+}
+
+export async function saveGroupKey(groupKey: StoredGroupKey): Promise<void> {
+  await db.groupKeys.put(groupKey)
+}
+
+export async function deleteGroupKey(groupUuid: string): Promise<void> {
+  await db.groupKeys.delete(groupUuid)
+}
+
+export async function getAllGroupKeys(): Promise<StoredGroupKey[]> {
+  return db.groupKeys.toArray()
+}
+
+// People
+export async function getPerson(uuid: string): Promise<StoredPerson | undefined> {
+  return db.people.get(uuid)
+}
+
+export async function savePerson(person: StoredPerson): Promise<void> {
+  await db.people.put(person)
+}
+
+export async function deletePerson(uuid: string): Promise<void> {
+  await db.people.delete(uuid)
+}
+
+export async function getSelfPerson(): Promise<StoredPerson | undefined> {
+  return db.people.where('isSelf').equals(1).first()
+}
+
+export async function getAllPeople(): Promise<StoredPerson[]> {
+  return db.people.toArray()
+}
+
+// Pending invites
+export async function getPendingInvite(id: string): Promise<PendingInvite | undefined> {
+  return db.pendingInvites.get(id)
+}
+
+export async function savePendingInvite(invite: PendingInvite): Promise<void> {
+  await db.pendingInvites.put(invite)
+}
+
+export async function deletePendingInvite(id: string): Promise<void> {
+  await db.pendingInvites.delete(id)
+}
+
+export async function getPendingInvitesByGroup(groupUuid: string): Promise<PendingInvite[]> {
+  return db.pendingInvites.where('groupUuid').equals(groupUuid).toArray()
+}
+
+export async function getPendingInvitesByStatus(
+  status: PendingInvite['status']
+): Promise<PendingInvite[]> {
+  return db.pendingInvites.where('status').equals(status).toArray()
+}
+
+export async function getAllPendingInvites(): Promise<PendingInvite[]> {
+  return db.pendingInvites.toArray()
 }

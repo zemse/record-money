@@ -204,3 +204,60 @@ export interface StoredConflict {
   winnerMutationUuid?: string
   status: 'pending' | 'resolved'
 }
+
+/**
+ * Group key storage for sync
+ */
+export interface StoredGroupKey {
+  groupUuid: string // primary key
+  symmetricKey: string // base64 encoded 32-byte Group Key
+  createdAt: number
+  rotatedAt?: number // last key rotation timestamp
+}
+
+/**
+ * Device info for a person
+ */
+export interface DeviceInfo {
+  deviceId: string // SHA-256(authPublicKey)
+  ipnsPublicKey: string // base64 encoded Ed25519 public key
+  authPublicKey: string // base64 encoded P-256 public key
+}
+
+/**
+ * Person entity for sync (replaces User)
+ */
+export interface StoredPerson {
+  uuid: string // primary key
+  name: string // display name
+  email?: string // optional email
+  devices?: DeviceInfo[] // devices belonging to this person
+  addedAt: number
+  addedBy?: string // UUID of person who added them
+  isSelf?: boolean // true if this is the current user
+  isPlaceholder?: boolean // true if not yet claimed an account
+}
+
+/**
+ * Pending invite for group invitations
+ */
+export interface PendingInvite {
+  id: string // unique invite ID (primary key)
+  groupUuid: string
+  groupName: string
+  // Temp keys for handshake
+  tempIpnsPrivateKey: string // base64 encoded
+  tempIpnsPublicKey: string // base64 encoded
+  tempSymmetricKey: string // base64 encoded
+  // Status
+  status: 'pending' | 'responded' | 'approved' | 'rejected' | 'expired'
+  // Response data (filled when recipient responds)
+  recipientAuthPublicKey?: string // base64 encoded
+  recipientIpnsPublicKey?: string // base64 encoded
+  recipientName?: string
+  // Timestamps
+  createdAt: number
+  expiresAt?: number // optional expiration
+  respondedAt?: number
+  approvedAt?: number
+}
