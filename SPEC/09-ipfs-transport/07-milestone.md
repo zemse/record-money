@@ -52,10 +52,10 @@
 
 ## 8.7 Conflict Resolution
 - [x] Conflict detection
-- [ ] Binary conflict UI (2 devices)
-- [ ] Multi-device conflict UI (3+ devices, show all values)
-- [ ] Bulk scroll UI
-- [ ] Override mutation creation
+- [x] Binary conflict UI (2 devices)
+- [x] Multi-device conflict UI (3+ devices, show all values)
+- [x] Bulk scroll UI
+- [x] Override mutation creation
 
 ## 8.8 Publishing
 - [ ] Mutation creation on local CRUD
@@ -87,7 +87,7 @@
 - [x] Pairing flow
 - [ ] Group members
 - [ ] Pending invite approvals
-- [ ] Conflict notifications
+- [x] Conflict notifications
 
 ## 8.12 Testing
 - [ ] Multi-device sync
