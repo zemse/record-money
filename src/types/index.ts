@@ -105,3 +105,75 @@ export interface Account {
   icon: string // emoji icon
   createdAt: number // timestamp ms
 }
+
+// ============================================================================
+// Sync Types
+// ============================================================================
+
+export type SyncMode = 'solo' | 'synced'
+
+export type ProviderType = 'pinata' | 'infura' | 'web3storage' | 'selfhosted'
+
+/**
+ * Device keys stored in IndexedDB
+ * These are generated once and never change for a device
+ */
+export interface DeviceKeys {
+  key: string // 'device-keys' - single row key
+  // IPNS key pair (Ed25519)
+  ipnsPrivateKey: string // base64 encoded 32-byte seed
+  ipnsPublicKey: string // base64 encoded 32-byte public key
+  // Auth/signing key pair (P-256)
+  authPrivateKey: string // base64 encoded 32-byte private key
+  authPublicKey: string // base64 encoded 65-byte uncompressed public key
+  // Derived device ID
+  deviceId: string // hex(SHA-256(authPublicKey))
+  // Creation timestamp
+  createdAt: number
+}
+
+/**
+ * Sync configuration including provider settings
+ */
+export interface SyncConfig {
+  key: string // 'sync-config' - single row key
+  mode: SyncMode // 'solo' or 'synced'
+  // Provider configuration (stored as JSON string for flexibility)
+  providerType?: ProviderType
+  providerConfig?: string // JSON-encoded provider-specific config
+  // Symmetric keys (base64 encoded, only present in 'synced' mode)
+  personalKey?: string // 32-byte Personal Key
+  broadcastKey?: string // 32-byte Broadcast Key
+  // Self person UUID (links to Person in sync types)
+  selfPersonUuid?: string
+  // Migration tracking
+  migrated: boolean // true if solo data has been migrated to mutations
+  migratedAt?: number // timestamp of migration
+  // CID history (JSON-encoded Map<string, CidHistory>)
+  cidHistory?: string
+}
+
+/**
+ * Queued mutation for offline support
+ * Mutations are stored here before being published to IPFS
+ */
+export interface QueuedMutation {
+  id: number // auto-increment, per-device incremental ID
+  mutationJson: string // JSON-encoded Mutation
+  status: 'pending' | 'published'
+  createdAt: number
+  publishedAt?: number
+}
+
+/**
+ * Peer sync state tracking
+ * Tracks the last synced mutation ID from each peer device
+ */
+export interface PeerSyncState {
+  deviceId: string // peer's device ID (primary key)
+  ipnsPublicKey: string // peer's IPNS public key (base64)
+  lastSyncedId: number // highest mutation ID verified & stored from this device
+  lastSyncedAt: number // timestamp of last successful sync
+  lastAttemptedAt?: number // timestamp of last sync attempt
+  consecutiveFailures: number // for backoff calculation
+}

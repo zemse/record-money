@@ -120,3 +120,38 @@ export type {
   MutationQueueStatus,
   QueuedMutation,
 } from './types'
+
+// IPFS provider module
+export {
+  // Types
+  type ProviderType,
+  type ProviderConfig,
+  type PinataConfig,
+  type InfuraConfig,
+  type Web3StorageConfig,
+  type SelfHostedConfig,
+  type IpfsProvider,
+  type UploadResult,
+  type FetchResult,
+  type IpnsRecord,
+  type IpnsPublishResult,
+  type UploadOptions,
+  type GatewayConfig,
+  type IpfsErrorCode,
+  type CidEntry,
+  type CidHistory,
+  // Classes and errors
+  IpfsError,
+  DEFAULT_GATEWAYS,
+  PinataProvider,
+  GatewayManager,
+  CidManager,
+  // Factory functions
+  createProvider,
+  createPinataProvider,
+  createGatewayManager,
+  createCidManager,
+  validateProviderConfig,
+  getProviderDisplayName,
+  getAvailableProviders,
+} from './ipfs'

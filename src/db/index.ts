@@ -7,6 +7,10 @@ import type {
   ExchangeRates,
   Category,
   Account,
+  DeviceKeys,
+  SyncConfig,
+  QueuedMutation,
+  PeerSyncState,
 } from '../types'
 import { DEFAULT_GROUP_UUID } from '../types'
 import { DEFAULT_CATEGORIES } from '../constants/categories'
@@ -19,6 +23,11 @@ const db = new Dexie('RecordMoney') as Dexie & {
   exchangeRates: EntityTable<ExchangeRates, 'key'>
   categories: EntityTable<Category, 'id'>
   accounts: EntityTable<Account, 'id'>
+  // Sync-related tables
+  deviceKeys: EntityTable<DeviceKeys, 'key'>
+  syncConfig: EntityTable<SyncConfig, 'key'>
+  mutationQueue: EntityTable<QueuedMutation, 'id'>
+  peerSyncState: EntityTable<PeerSyncState, 'deviceId'>
 }
 
 db.version(1).stores({
@@ -53,6 +62,22 @@ db.version(4).stores({
   exchangeRates: 'key',
   categories: 'id, name, isSystem',
   accounts: 'id, name',
+})
+
+// Version 5: Add sync-related tables
+db.version(5).stores({
+  records: 'uuid, groupId, date, category, sourceHash, account',
+  users: 'email',
+  groups: 'uuid',
+  settings: 'key',
+  exchangeRates: 'key',
+  categories: 'id, name, isSystem',
+  accounts: 'id, name',
+  // Sync tables
+  deviceKeys: 'key',
+  syncConfig: 'key',
+  mutationQueue: '++id, status',
+  peerSyncState: 'deviceId',
 })
 
 export { db }
@@ -311,4 +336,101 @@ export async function changeUserEmail(
   onProgress?.(current, total)
 
   return { success: true }
+}
+
+// ============================================================================
+// Sync-related helpers
+// ============================================================================
+
+// Device keys
+export async function getDeviceKeys(): Promise<DeviceKeys | undefined> {
+  return db.deviceKeys.get('device-keys')
+}
+
+export async function saveDeviceKeys(keys: Omit<DeviceKeys, 'key'>): Promise<void> {
+  await db.deviceKeys.put({ key: 'device-keys', ...keys })
+}
+
+// Sync config
+export async function getSyncConfig(): Promise<SyncConfig | undefined> {
+  return db.syncConfig.get('sync-config')
+}
+
+export async function updateSyncConfig(updates: Partial<Omit<SyncConfig, 'key'>>): Promise<void> {
+  const existing = await getSyncConfig()
+  if (existing) {
+    await db.syncConfig.update('sync-config', updates)
+  } else {
+    await db.syncConfig.add({
+      key: 'sync-config',
+      mode: 'solo',
+      migrated: false,
+      ...updates,
+    })
+  }
+}
+
+export async function initializeSyncConfig(): Promise<void> {
+  const config = await getSyncConfig()
+  if (!config) {
+    await db.syncConfig.add({
+      key: 'sync-config',
+      mode: 'solo',
+      migrated: false,
+    })
+  }
+}
+
+// Mutation queue
+export async function getNextMutationId(): Promise<number> {
+  const lastMutation = await db.mutationQueue.orderBy('id').last()
+  return lastMutation ? lastMutation.id + 1 : 1
+}
+
+export async function queueMutation(mutationJson: string): Promise<number> {
+  return db.mutationQueue.add({
+    mutationJson,
+    status: 'pending',
+    createdAt: now(),
+  } as QueuedMutation)
+}
+
+export async function getPendingMutations(): Promise<QueuedMutation[]> {
+  return db.mutationQueue.where('status').equals('pending').sortBy('id')
+}
+
+export async function markMutationsPublished(ids: number[]): Promise<void> {
+  const timestamp = now()
+  await db.mutationQueue.where('id').anyOf(ids).modify({
+    status: 'published',
+    publishedAt: timestamp,
+  })
+}
+
+// Peer sync state
+export async function getPeerSyncState(deviceId: string): Promise<PeerSyncState | undefined> {
+  return db.peerSyncState.get(deviceId)
+}
+
+export async function updatePeerSyncState(
+  deviceId: string,
+  updates: Partial<Omit<PeerSyncState, 'deviceId'>>
+): Promise<void> {
+  const existing = await getPeerSyncState(deviceId)
+  if (existing) {
+    await db.peerSyncState.update(deviceId, updates)
+  } else {
+    await db.peerSyncState.add({
+      deviceId,
+      ipnsPublicKey: '',
+      lastSyncedId: 0,
+      lastSyncedAt: 0,
+      consecutiveFailures: 0,
+      ...updates,
+    } as PeerSyncState)
+  }
+}
+
+export async function getAllPeerSyncStates(): Promise<PeerSyncState[]> {
+  return db.peerSyncState.toArray()
 }

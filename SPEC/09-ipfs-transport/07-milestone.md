@@ -8,20 +8,20 @@
 - [x] Canonical JSON
 
 ## 8.2 IPFS Integration
-- [ ] Pluggable pinning provider interface
-- [ ] Piñata provider implementation
+- [x] Pluggable pinning provider interface
+- [x] Piñata provider implementation
 - [ ] Infura provider implementation (optional)
 - [ ] web3.storage provider implementation (optional)
 - [ ] Self-hosted IPFS provider implementation (optional)
-- [ ] Upload, fetch, IPNS resolve/update
-- [ ] Multi-gateway (highest seq)
-- [ ] Unpin old CIDs
+- [x] Upload, fetch, IPNS resolve/update
+- [x] Multi-gateway (highest seq)
+- [x] Unpin old CIDs
 
 ## 8.3 Data Structures
 - [ ] DeviceManifest, DeviceRing, PeerDirectory schemas
 - [ ] Mutation, GroupManifest schemas
-- [ ] IndexedDB updates for sync metadata
-- [ ] Provider config storage
+- [x] IndexedDB updates for sync metadata
+- [x] Provider config storage
 
 ## 8.4 Device Setup
 - [ ] First-time setup UI
