@@ -18,6 +18,7 @@ import {
   type DeviceSetupProgress,
 } from '../sync/device-setup'
 import { getAvailableProviders } from '../sync/ipfs'
+import { useSyncEngine, useSyncStatus } from '../hooks/useSyncEngine'
 import type { ProviderConfig, PinataConfig } from '../sync/ipfs'
 
 // ============================================================================
@@ -496,8 +497,18 @@ export function SyncStatus({ onSetup, onPairDevice }: SyncStatusProps) {
   const [verificationEmojis, setVerificationEmojis] = useState<string[] | null>(null)
   const [showResetConfirm, setShowResetConfirm] = useState(false)
 
+  // Sync engine state
+  const { sync, start } = useSyncEngine()
+  const { status: syncStatus, lastSyncText, pendingCount, canSync } = useSyncStatus()
+
   useEffect(() => {
-    getSyncStatus().then(setStatus)
+    getSyncStatus().then((s) => {
+      setStatus(s)
+      // Start sync engine if synced
+      if (s?.mode === 'synced') {
+        start()
+      }
+    })
     getDeviceVerificationEmojis().then(setVerificationEmojis)
   }, [])
 
@@ -529,6 +540,42 @@ export function SyncStatus({ onSetup, onPairDevice }: SyncStatusProps) {
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-500/20">
             <span className="text-green-600 dark:text-green-400">✓</span>
           </div>
+        </div>
+
+        {/* Sync Status Indicator */}
+        <div className="mt-4 rounded-xl bg-surface-tertiary p-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {syncStatus === 'syncing' ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  <span className="text-sm text-content-secondary">Syncing...</span>
+                </>
+              ) : syncStatus === 'error' ? (
+                <>
+                  <div className="h-2 w-2 rounded-full bg-red-500" />
+                  <span className="text-sm text-red-500">Sync error</span>
+                </>
+              ) : (
+                <>
+                  <div className="h-2 w-2 rounded-full bg-green-500" />
+                  <span className="text-sm text-content-secondary">{lastSyncText}</span>
+                </>
+              )}
+            </div>
+            <button
+              onClick={sync}
+              disabled={!canSync}
+              className="rounded-lg px-3 py-1 text-sm font-medium text-primary transition-colors hover:bg-primary/10 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Sync Now
+            </button>
+          </div>
+          {pendingCount > 0 && (
+            <p className="mt-2 text-xs text-content-tertiary">
+              {pendingCount} pending {pendingCount === 1 ? 'change' : 'changes'}
+            </p>
+          )}
         </div>
 
         {verificationEmojis && (
