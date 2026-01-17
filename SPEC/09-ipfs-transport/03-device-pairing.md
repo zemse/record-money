@@ -69,3 +69,10 @@ When user already has devices A and B paired, and adds device C:
 5. **B adds C** to B's DeviceRing
 6. **C polls B's IPNS** → finds self in B's PeerDirectory → can now sync with B
 7. **All three devices** now sync with each other
+
+## Implementation Notes
+
+- QR generation: `qrcode.react` (QRCodeSVG component)
+- QR scanning: `html5-qrcode` (camera-based scanning with permission handling)
+- UI provides fallback manual code entry for devices without camera
+- Session timeout: 1 hour, polling interval: 3 seconds
