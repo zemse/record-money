@@ -110,3 +110,4 @@ Use mock pinning provider for unit tests. For multi-device testing: use multiple
 - 328 unit tests covering all core functionality
 - Manual testing guide for multi-device integration scenarios
 - All services implemented with TypeScript types
+- QR code support: qrcode.react for generation, html5-qrcode for camera scanning
