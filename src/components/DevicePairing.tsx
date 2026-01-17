@@ -6,7 +6,7 @@
  * - Joiner: Scan QR/enter code, show emojis, wait for keys
  */
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import {
   generatePairingQR,
   serializeQRPayload,
@@ -15,13 +15,13 @@ import {
   pollForResponse,
   confirmPairing,
   pollForKeys,
-  isSessionValid,
-  getStateMessage,
   type PairingSession,
   type PairingQRPayload,
   type PairingProgress,
 } from '../sync/pairing'
-import { migrateSoloData, getMigrationStats, type MigrationProgress } from '../sync/migration'
+import { migrateSoloData, type MigrationProgress } from '../sync/migration'
+import { QRCodeDisplay } from './QRCodeDisplay'
+import { QRCodeScanner } from './QRCodeScanner'
 
 // ============================================================================
 // Types
@@ -43,15 +43,16 @@ export function DevicePairing({ onComplete, onCancel }: DevicePairingProps) {
   const [role, setRole] = useState<PairingRole>('select')
 
   // Initiator state
-  const [qrPayload, setQrPayload] = useState<PairingQRPayload | null>(null)
+  const [, setQrPayload] = useState<PairingQRPayload | null>(null)
   const [payloadString, setPayloadString] = useState<string>('')
   const [initiatorSession, setInitiatorSession] = useState<PairingSession | null>(null)
   const [peerEmojis, setPeerEmojis] = useState<string[] | null>(null)
 
   // Joiner state
   const [inputCode, setInputCode] = useState('')
-  const [joinerSession, setJoinerSession] = useState<PairingSession | null>(null)
+  const [, setJoinerSession] = useState<PairingSession | null>(null)
   const [myEmojis, setMyEmojis] = useState<string[] | null>(null)
+  const [joinerInputMode, setJoinerInputMode] = useState<'scan' | 'manual'>('scan')
 
   // Shared state
   const [error, setError] = useState<string | null>(null)
@@ -211,6 +212,32 @@ export function DevicePairing({ onComplete, onCancel }: DevicePairingProps) {
     setProgress(null)
     setMigrationProgress(null)
     setIsComplete(false)
+    setJoinerInputMode('scan')
+  }
+
+  // Handle QR scan result
+  const handleQRScan = async (scannedData: string) => {
+    setError(null)
+
+    const payload = parseQRPayload(scannedData)
+    if (!payload) {
+      setError('Invalid QR code. Please scan a valid pairing code.')
+      return
+    }
+
+    try {
+      setProgress({ state: 'scanned', message: 'Processing...' })
+
+      const { session, emojis } = await initiateJoining(payload, (p) => setProgress(p))
+      setJoinerSession(session)
+      setMyEmojis(emojis)
+
+      // Start polling for keys
+      startPollingForKeys(session)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to join')
+      setProgress(null)
+    }
   }
 
   // ============================================================================
@@ -397,14 +424,8 @@ export function DevicePairing({ onComplete, onCancel }: DevicePairingProps) {
             </p>
           </div>
 
-          {/* QR Placeholder - would need qrcode library */}
-          <div className="flex aspect-square items-center justify-center rounded-xl bg-surface-tertiary">
-            <div className="text-center">
-              <span className="text-4xl">📱</span>
-              <p className="mt-2 text-sm text-content-tertiary">QR code coming soon</p>
-              <p className="text-xs text-content-tertiary">Use the code below for now</p>
-            </div>
-          </div>
+          {/* QR Code Display */}
+          <QRCodeDisplay value={payloadString} size={280} className="mx-auto" />
 
           {/* Copy-able code */}
           <div className="relative">
@@ -512,7 +533,7 @@ export function DevicePairing({ onComplete, onCancel }: DevicePairingProps) {
       )
     }
 
-    // Enter code
+    // Scan QR or Enter code
     return (
       <div className="rounded-2xl border border-border-default bg-surface p-5">
         <div className="space-y-4">
@@ -520,21 +541,60 @@ export function DevicePairing({ onComplete, onCancel }: DevicePairingProps) {
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-light text-3xl">
               📥
             </div>
-            <h2 className="text-lg font-semibold text-content">Enter Pairing Code</h2>
+            <h2 className="text-lg font-semibold text-content">Join Device</h2>
             <p className="mt-1 text-sm text-content-secondary">
-              Paste the code from the other device
+              Scan QR code or enter pairing code
             </p>
           </div>
 
-          <div>
-            <textarea
-              value={inputCode}
-              onChange={(e) => setInputCode(e.target.value)}
-              placeholder="Paste the pairing code here..."
-              rows={4}
-              className="w-full resize-none rounded-xl border border-border-default bg-surface p-3 font-mono text-sm text-content transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-            />
+          {/* Tab switcher */}
+          <div className="flex rounded-xl bg-surface-tertiary p-1">
+            <button
+              onClick={() => setJoinerInputMode('scan')}
+              className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
+                joinerInputMode === 'scan'
+                  ? 'bg-surface text-content shadow-sm'
+                  : 'text-content-secondary hover:text-content'
+              }`}
+            >
+              Scan QR
+            </button>
+            <button
+              onClick={() => setJoinerInputMode('manual')}
+              className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
+                joinerInputMode === 'manual'
+                  ? 'bg-surface text-content shadow-sm'
+                  : 'text-content-secondary hover:text-content'
+              }`}
+            >
+              Enter Code
+            </button>
           </div>
+
+          {/* QR Scanner */}
+          {joinerInputMode === 'scan' && !progress && (
+            <QRCodeScanner onScan={handleQRScan} onError={(err) => setError(err)} />
+          )}
+
+          {/* Manual code entry */}
+          {joinerInputMode === 'manual' && !progress && (
+            <div className="space-y-3">
+              <textarea
+                value={inputCode}
+                onChange={(e) => setInputCode(e.target.value)}
+                placeholder="Paste the pairing code here..."
+                rows={4}
+                className="w-full resize-none rounded-xl border border-border-default bg-surface p-3 font-mono text-sm text-content transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+              <button
+                onClick={handleJoinWithCode}
+                disabled={!inputCode.trim()}
+                className="w-full rounded-xl bg-primary py-3 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Connect
+              </button>
+            </div>
+          )}
 
           {error && (
             <div className="rounded-xl bg-red-50 px-4 py-3 dark:bg-red-500/10">
@@ -549,21 +609,12 @@ export function DevicePairing({ onComplete, onCancel }: DevicePairingProps) {
             </div>
           )}
 
-          <div className="flex gap-3">
-            <button
-              onClick={handleCancel}
-              className="flex-1 rounded-xl border border-border-default py-3 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-hover"
-            >
-              Back
-            </button>
-            <button
-              onClick={handleJoinWithCode}
-              disabled={!inputCode.trim() || !!progress}
-              className="flex-1 rounded-xl bg-primary py-3 text-sm font-medium text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              Connect
-            </button>
-          </div>
+          <button
+            onClick={handleCancel}
+            className="w-full rounded-xl border border-border-default py-3 text-sm font-medium text-content-secondary transition-colors hover:bg-surface-hover"
+          >
+            Back
+          </button>
         </div>
       </div>
     )

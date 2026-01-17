@@ -19,6 +19,8 @@
     "dexie": "^4.2.1",
     "dexie-react-hooks": "^4.2.0",
     "fast-json-stable-stringify": "^2.1.0",
+    "html5-qrcode": "^2.3.8",
+    "qrcode.react": "^4.2.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-router-dom": "^7.12.0",

@@ -106,14 +106,14 @@ export type PairingProgressCallback = (progress: PairingProgress) => void
 // Constants
 // ============================================================================
 
-/** Session expiry time in milliseconds (10 minutes) */
-const SESSION_EXPIRY_MS = 10 * 60 * 1000
+/** Session expiry time in milliseconds (1 hour for testing) */
+const SESSION_EXPIRY_MS = 60 * 60 * 1000
 
-/** Polling interval for temp IPNS (2 seconds) */
-const POLL_INTERVAL_MS = 2000
+/** Polling interval for temp IPNS (3 seconds) */
+const POLL_INTERVAL_MS = 3000
 
-/** Max poll attempts before giving up */
-const MAX_POLL_ATTEMPTS = 60 // 2 minutes
+/** Max poll attempts before giving up (indefinite - 1 hour at 3s intervals) */
+const MAX_POLL_ATTEMPTS = 1200
 
 // ============================================================================
 // QR Payload Generation
