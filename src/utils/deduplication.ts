@@ -413,8 +413,16 @@ function checkSimilarity(
   }
 
   // Check accounts match
-  const r1Accounts = r1.accounts?.map((a) => `${a.accountId}:${a.amount}`).sort().join(',') || ''
-  const r2Accounts = r2.accounts?.map((a) => `${a.accountId}:${a.amount}`).sort().join(',') || ''
+  const r1Accounts =
+    r1.accounts
+      ?.map((a) => `${a.accountId}:${a.amount}`)
+      .sort()
+      .join(',') || ''
+  const r2Accounts =
+    r2.accounts
+      ?.map((a) => `${a.accountId}:${a.amount}`)
+      .sort()
+      .join(',') || ''
   if (r1Accounts !== r2Accounts && r1Accounts && r2Accounts) {
     // Reduce similarity if both have accounts but they differ
     score -= 0.1

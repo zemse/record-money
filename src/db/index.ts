@@ -1,5 +1,13 @@
 import Dexie, { type EntityTable } from 'dexie'
-import type { ExpenseRecord, User, Group, Settings, ExchangeRates, Category, Account } from '../types'
+import type {
+  ExpenseRecord,
+  User,
+  Group,
+  Settings,
+  ExchangeRates,
+  Category,
+  Account,
+} from '../types'
 import { DEFAULT_GROUP_UUID } from '../types'
 import { DEFAULT_CATEGORIES } from '../constants/categories'
 

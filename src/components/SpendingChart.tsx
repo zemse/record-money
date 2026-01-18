@@ -23,16 +23,13 @@ const DEFAULT_COLOR = '#64748b'
 
 export function SpendingChart({ records, categories, displayCurrency }: SpendingChartProps) {
   // Aggregate spending by category (exclude Settlement records)
-  const spendingByCategory = records.reduce(
-    (acc, record) => {
-      if (record.category === 'Settlement') return acc
+  const spendingByCategory = records.reduce((acc, record) => {
+    if (record.category === 'Settlement') return acc
 
-      const existing = acc.get(record.category) || 0
-      acc.set(record.category, existing + record.amount)
-      return acc
-    },
-    new Map<string, number>()
-  )
+    const existing = acc.get(record.category) || 0
+    acc.set(record.category, existing + record.amount)
+    return acc
+  }, new Map<string, number>())
 
   // Convert to chart data format
   const chartData = Array.from(spendingByCategory.entries())
@@ -69,9 +66,7 @@ export function SpendingChart({ records, categories, displayCurrency }: Spending
             outerRadius={100}
             paddingAngle={2}
             dataKey="value"
-            label={({ name, percent }) =>
-              `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
-            }
+            label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
             labelLine={false}
           >
             {chartData.map((entry, index) => (

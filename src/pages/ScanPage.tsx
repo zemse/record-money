@@ -509,10 +509,7 @@ export function ScanPage() {
               )}
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={selectAll}
-                className="text-xs text-primary hover:text-primary-hover"
-              >
+              <button onClick={selectAll} className="text-xs text-primary hover:text-primary-hover">
                 Select All
               </button>
               <span className="text-content-tertiary">|</span>

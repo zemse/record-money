@@ -456,9 +456,7 @@ export function ChatPanel() {
                                     {message.action.data.accounts
                                       .map((a) => {
                                         const acc = accounts?.find((ac) => ac.id === a.accountId)
-                                        return acc
-                                          ? `${acc.icon} ${acc.name}`
-                                          : a.accountId
+                                        return acc ? `${acc.icon} ${acc.name}` : a.accountId
                                       })
                                       .join(', ')}
                                   </p>
@@ -508,9 +506,20 @@ export function ChatPanel() {
                               </p>
                               {(message.action as CreateAccountAction).data.thenCreateExpense && (
                                 <p className="text-sm text-content-secondary">
-                                  + {(message.action as CreateAccountAction).data.thenCreateExpense!.title} -{' '}
-                                  {(message.action as CreateAccountAction).data.thenCreateExpense!.currency}{' '}
-                                  {(message.action as CreateAccountAction).data.thenCreateExpense!.amount}
+                                  +{' '}
+                                  {
+                                    (message.action as CreateAccountAction).data.thenCreateExpense!
+                                      .title
+                                  }{' '}
+                                  -{' '}
+                                  {
+                                    (message.action as CreateAccountAction).data.thenCreateExpense!
+                                      .currency
+                                  }{' '}
+                                  {
+                                    (message.action as CreateAccountAction).data.thenCreateExpense!
+                                      .amount
+                                  }
                                 </p>
                               )}
                             </div>
