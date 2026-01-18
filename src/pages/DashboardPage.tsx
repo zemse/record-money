@@ -9,6 +9,7 @@ import {
   calculateBalancesByGroup,
   formatAmount,
 } from '../utils/balanceCalculator'
+import { getUserAlias } from '../utils/formatting'
 import { getExchangeRates, convertAmount, getRatesAge } from '../utils/currencyConverter'
 import { SpendingChart } from '../components/SpendingChart'
 import { SpendingTrendChart } from '../components/SpendingTrendChart'
@@ -57,11 +58,6 @@ export function DashboardPage() {
   const currentUserEmail = settings?.currentUserEmail
   const currentUser = users?.find((u) => u.email === currentUserEmail)
 
-  const getUserAlias = (email: string) => {
-    const user = users?.find((u) => u.email === email)
-    return user?.alias || email
-  }
-
   // Filter records for chart based on period (must be before any conditional returns)
   const chartRecords = useMemo(() => {
     if (!records) return []
@@ -95,8 +91,8 @@ export function DashboardPage() {
     amount: number,
     currency: string
   ) => {
-    const fromAlias = getUserAlias(fromEmail)
-    const toAlias = getUserAlias(toEmail)
+    const fromAlias = getUserAlias(fromEmail, users)
+    const toAlias = getUserAlias(toEmail, users)
 
     if (
       !window.confirm(
@@ -343,10 +339,10 @@ export function DashboardPage() {
                 >
                   <div className="flex items-center gap-2">
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100 text-sm font-medium text-green-700 dark:bg-green-500/20 dark:text-green-400">
-                      {getUserAlias(debt.email).charAt(0).toUpperCase()}
+                      {getUserAlias(debt.email, users).charAt(0).toUpperCase()}
                     </span>
                     <span className="text-sm font-medium text-content">
-                      {getUserAlias(debt.email)}
+                      {getUserAlias(debt.email, users)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -382,10 +378,10 @@ export function DashboardPage() {
                 >
                   <div className="flex items-center gap-2">
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-100 text-sm font-medium text-red-700 dark:bg-red-500/20 dark:text-red-400">
-                      {getUserAlias(debt.email).charAt(0).toUpperCase()}
+                      {getUserAlias(debt.email, users).charAt(0).toUpperCase()}
                     </span>
                     <span className="text-sm font-medium text-content">
-                      {getUserAlias(debt.email)}
+                      {getUserAlias(debt.email, users)}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -474,7 +470,7 @@ export function DashboardPage() {
                       {groupBalance.owedBy.map((debt, idx) => (
                         <div key={`owed-${idx}`} className="flex justify-between text-sm">
                           <span className="text-content-secondary">
-                            {getUserAlias(debt.email)} owes you
+                            {getUserAlias(debt.email, users)} owes you
                           </span>
                           <span className="text-green-600 dark:text-green-400">
                             {formatAmount(debt.amount, debt.currency)}
@@ -484,7 +480,7 @@ export function DashboardPage() {
                       {groupBalance.owes.map((debt, idx) => (
                         <div key={`owes-${idx}`} className="flex justify-between text-sm">
                           <span className="text-content-secondary">
-                            You owe {getUserAlias(debt.email)}
+                            You owe {getUserAlias(debt.email, users)}
                           </span>
                           <span className="text-red-600 dark:text-red-400">
                             {formatAmount(debt.amount, debt.currency)}

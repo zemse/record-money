@@ -5,6 +5,7 @@ import type { Group, ExchangeRates } from '../types'
 import { DEFAULT_GROUP_UUID } from '../types'
 import { UserPicker } from '../components/UserPicker'
 import { calculateBalancesByGroup, formatAmount } from '../utils/balanceCalculator'
+import { getUserAlias } from '../utils/formatting'
 import { getExchangeRates, convertAmount } from '../utils/currencyConverter'
 import {
   generateExportUrl,
@@ -127,11 +128,6 @@ export function GroupsPage() {
     if (window.confirm('Are you sure you want to delete this group?')) {
       await db.groups.delete(uuid)
     }
-  }
-
-  const getUserAlias = (email: string) => {
-    const user = users?.find((u) => u.email === email)
-    return user?.alias || email
   }
 
   // Get records for a specific group
@@ -430,7 +426,7 @@ export function GroupsPage() {
                         key={email}
                         className="rounded-lg bg-surface-tertiary px-2 py-1 text-xs text-content-secondary"
                       >
-                        {getUserAlias(email)}
+                        {getUserAlias(email, users)}
                       </span>
                     ))}
                   </div>

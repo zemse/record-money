@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import type { ExpenseRecord, User } from '../types'
+import { formatAmount } from '../utils/balanceCalculator'
+import { getUserAlias, formatDate } from '../utils/formatting'
 
 interface RecordListProps {
   records: ExpenseRecord[]
@@ -19,44 +21,12 @@ export function RecordList({
   onShare,
 }: RecordListProps) {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null)
-  const getUserAlias = (email: string) => {
-    const user = users.find((u) => u.email === email)
-    return user?.alias || email
-  }
 
   const isUserInvolved = (record: ExpenseRecord) => {
     if (!currentUserEmail) return true // If no current user, don't show indicator
     const inPaidBy = record.paidBy.some((p) => p.email === currentUserEmail)
     const inPaidFor = record.paidFor.some((p) => p.email === currentUserEmail)
     return inPaidBy || inPaidFor
-  }
-
-  const formatAmount = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 2,
-    }).format(amount)
-  }
-
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr)
-    const today = new Date()
-    const yesterday = new Date(today)
-    yesterday.setDate(yesterday.getDate() - 1)
-
-    if (dateStr === today.toISOString().split('T')[0]) {
-      return 'Today'
-    }
-    if (dateStr === yesterday.toISOString().split('T')[0]) {
-      return 'Yesterday'
-    }
-
-    return date.toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-    })
   }
 
   // Group records by date
@@ -177,13 +147,14 @@ export function RecordList({
                         <p className="truncate text-sm text-content-secondary">
                           {record.paidBy.length > 0 && (
                             <>
-                              Paid by {record.paidBy.map((p) => getUserAlias(p.email)).join(', ')}
+                              Paid by{' '}
+                              {record.paidBy.map((p) => getUserAlias(p.email, users)).join(', ')}
                             </>
                           )}
                         </p>
                         {record.paidFor.length > 0 && (
                           <p className="truncate text-xs text-content-tertiary">
-                            For {record.paidFor.map((p) => getUserAlias(p.email)).join(', ')}
+                            For {record.paidFor.map((p) => getUserAlias(p.email, users)).join(', ')}
                           </p>
                         )}
                       </div>

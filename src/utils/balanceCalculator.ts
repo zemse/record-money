@@ -96,6 +96,9 @@ export function calculateRecordDebts(record: ExpenseRecord): Debt[] {
   // proportional to how much each payer contributed
   const totalPaid = Array.from(paidByAmounts.values()).reduce((sum, v) => sum + v, 0)
 
+  // Guard against division by zero - if no one paid, there are no debts
+  if (totalPaid === 0) return debts
+
   owedAmounts.forEach((owedAmount, owingEmail) => {
     paidByAmounts.forEach((paidAmount, payerEmail) => {
       if (owingEmail === payerEmail) return // Skip self
