@@ -1,5 +1,7 @@
 # Record Money
 
+**[record-money.netlify.app](https://record-money.netlify.app/)**
+
 A decentralized expense tracking and splitting app. Track shared expenses, split bills, and see who owes whom - all without accounts or servers. Your data stays in your browser.
 
 ## Why Record Money?
