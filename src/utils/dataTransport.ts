@@ -21,6 +21,19 @@ const MAX_URL_LENGTH = 2000
 // Max records allowed in a single import to prevent storage DoS
 const MAX_IMPORT_RECORDS = 10000
 
+const ALLOWED_IMPORT_CURRENCIES = new Set([
+  'INR',
+  'USD',
+  'EUR',
+  'GBP',
+  'JPY',
+  'AUD',
+  'CAD',
+  'SGD',
+  'AED',
+  'THB',
+])
+
 // URL-safe base64 encoding (replaces + with -, / with _, removes padding =)
 function toUrlSafeBase64(str: string): string {
   const base64 = btoa(unescape(encodeURIComponent(str)))
@@ -54,7 +67,14 @@ export function validateRecord(r: unknown, index: number): string | null {
   if (typeof rec.uuid !== 'string' || !rec.uuid) return `Record ${index}: missing uuid`
   if (typeof rec.title !== 'string') return `Record ${index}: missing title`
   if (typeof rec.amount !== 'number' || isNaN(rec.amount)) return `Record ${index}: invalid amount`
-  if (typeof rec.currency !== 'string' || rec.currency.length !== 3) return `Record ${index}: invalid currency`
+  if (
+    typeof rec.currency !== 'string' ||
+    rec.currency.length !== 3 ||
+    rec.currency !== rec.currency.toUpperCase() ||
+    !ALLOWED_IMPORT_CURRENCIES.has(rec.currency)
+  ) {
+    return `Record ${index}: invalid currency`
+  }
   if (typeof rec.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(rec.date)) return `Record ${index}: invalid date format`
   if (!Array.isArray(rec.paidBy) || rec.paidBy.length === 0) return `Record ${index}: missing paidBy`
   if (!Array.isArray(rec.paidFor) || rec.paidFor.length === 0) return `Record ${index}: missing paidFor`

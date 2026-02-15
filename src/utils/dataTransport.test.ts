@@ -352,6 +352,11 @@ describe('validateRecord', () => {
     expect(validateRecord({ ...sampleRecord, currency: 'US' }, 0)).toContain('invalid currency')
   })
 
+  it('should reject unsupported currency codes', () => {
+    expect(validateRecord({ ...sampleRecord, currency: 'XXX' }, 0)).toContain('invalid currency')
+    expect(validateRecord({ ...sampleRecord, currency: 'usd' }, 0)).toContain('invalid currency')
+  })
+
   it('should reject NaN amount', () => {
     expect(validateRecord({ ...sampleRecord, amount: NaN }, 0)).toContain('invalid amount')
   })
