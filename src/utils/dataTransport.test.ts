@@ -383,8 +383,22 @@ describe('validateRecord', () => {
     expect(validateRecord(noUuid, 0)).toContain('missing uuid')
   })
 
+  it('should reject invalid uuid format', () => {
+    expect(validateRecord({ ...sampleRecord, uuid: 'not-a-uuid' }, 0)).toContain(
+      'invalid uuid format'
+    )
+  })
+
+  it('should reject empty title', () => {
+    expect(validateRecord({ ...sampleRecord, title: '' }, 0)).toContain('missing title')
+  })
+
   it('should reject invalid date format', () => {
     expect(validateRecord({ ...sampleRecord, date: '15-01-2024' }, 0)).toContain('invalid date format')
+  })
+
+  it('should reject invalid calendar date', () => {
+    expect(validateRecord({ ...sampleRecord, date: '2024-02-30' }, 0)).toContain('invalid date')
   })
 
   it('should reject invalid currency length', () => {
@@ -400,9 +414,30 @@ describe('validateRecord', () => {
     expect(validateRecord({ ...sampleRecord, amount: NaN }, 0)).toContain('invalid amount')
   })
 
+  it('should reject negative amount', () => {
+    expect(validateRecord({ ...sampleRecord, amount: -100 }, 0)).toContain('invalid amount')
+  })
+
+  it('should reject infinite amount', () => {
+    expect(validateRecord({ ...sampleRecord, amount: Infinity }, 0)).toContain('invalid amount')
+  })
+
   it('should reject invalid participant share', () => {
     const bad = { ...sampleRecord, paidFor: [{ email: 'a@b.com', share: NaN }] }
     expect(validateRecord(bad, 0)).toContain('invalid share')
+  })
+
+  it('should reject invalid required string fields', () => {
+    expect(validateRecord({ ...sampleRecord, description: 42 }, 0)).toContain('invalid description')
+    expect(validateRecord({ ...sampleRecord, category: false }, 0)).toContain('invalid category')
+    expect(validateRecord({ ...sampleRecord, time: 1200 }, 0)).toContain('invalid time')
+    expect(validateRecord({ ...sampleRecord, icon: 1 }, 0)).toContain('invalid icon')
+    expect(validateRecord({ ...sampleRecord, comments: 1 }, 0)).toContain('invalid comments')
+  })
+
+  it('should reject invalid shareType and groupId', () => {
+    expect(validateRecord({ ...sampleRecord, shareType: 'invalid' }, 0)).toContain('invalid shareType')
+    expect(validateRecord({ ...sampleRecord, groupId: 1 }, 0)).toContain('invalid groupId')
   })
 })
 
@@ -427,7 +462,7 @@ describe('validateUser', () => {
 describe('URL round-trip', () => {
   it('should preserve all record fields through export/import cycle', () => {
     const fullRecord: ExpenseRecord = {
-      uuid: 'test-uuid-123',
+      uuid: '123e4567-e89b-42d3-a456-426614174001',
       title: 'Complete Record',
       description: 'With all fields',
       category: 'Shopping',

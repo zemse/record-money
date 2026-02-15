@@ -36,6 +36,8 @@ const ALLOWED_IMPORT_CURRENCIES = new Set([
   'AED',
   'THB',
 ])
+const ALLOWED_SHARE_TYPES = new Set(['equal', 'percentage', 'exact', 'shares'])
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 // URL-safe base64 encoding (replaces + with -, / with _, removes padding =)
 function toUrlSafeBase64(str: string): string {
@@ -63,13 +65,22 @@ function validateParticipant(p: unknown, context: string): string | null {
   return null
 }
 
+function isValidCalendarDate(dateString: string): boolean {
+  const [year, month, day] = dateString.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+}
+
 export function validateRecord(r: unknown, index: number): string | null {
   if (typeof r !== 'object' || r === null) return `Record ${index}: not an object`
   const rec = r as Record<string, unknown>
 
   if (typeof rec.uuid !== 'string' || !rec.uuid) return `Record ${index}: missing uuid`
-  if (typeof rec.title !== 'string') return `Record ${index}: missing title`
-  if (typeof rec.amount !== 'number' || isNaN(rec.amount)) return `Record ${index}: invalid amount`
+  if (!UUID_REGEX.test(rec.uuid)) return `Record ${index}: invalid uuid format`
+  if (typeof rec.title !== 'string' || !rec.title) return `Record ${index}: missing title`
+  if (typeof rec.description !== 'string') return `Record ${index}: invalid description`
+  if (typeof rec.category !== 'string') return `Record ${index}: invalid category`
+  if (typeof rec.amount !== 'number' || isNaN(rec.amount) || rec.amount < 0 || !isFinite(rec.amount)) return `Record ${index}: invalid amount`
   if (
     typeof rec.currency !== 'string' ||
     rec.currency.length !== 3 ||
@@ -79,8 +90,16 @@ export function validateRecord(r: unknown, index: number): string | null {
     return `Record ${index}: invalid currency`
   }
   if (typeof rec.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(rec.date)) return `Record ${index}: invalid date format`
+  if (!isValidCalendarDate(rec.date)) return `Record ${index}: invalid date`
+  if (typeof rec.time !== 'string') return `Record ${index}: invalid time`
+  if (typeof rec.icon !== 'string') return `Record ${index}: invalid icon`
   if (!Array.isArray(rec.paidBy) || rec.paidBy.length === 0) return `Record ${index}: missing paidBy`
   if (!Array.isArray(rec.paidFor) || rec.paidFor.length === 0) return `Record ${index}: missing paidFor`
+  if (typeof rec.shareType !== 'string' || !ALLOWED_SHARE_TYPES.has(rec.shareType)) {
+    return `Record ${index}: invalid shareType`
+  }
+  if (rec.groupId !== null && typeof rec.groupId !== 'string') return `Record ${index}: invalid groupId`
+  if (typeof rec.comments !== 'string') return `Record ${index}: invalid comments`
 
   for (let i = 0; i < rec.paidBy.length; i++) {
     const err = validateParticipant(rec.paidBy[i], `Record ${index} paidBy[${i}]`)
