@@ -214,6 +214,25 @@ describe('parseImportUrl', () => {
       expect(result.error).toContain('User 0')
     }
   })
+
+  it('should reject payloads with too many users', () => {
+    const users = Array.from({ length: 10001 }, (_, i) => ({
+      email: `user${i}@example.com`,
+      alias: `User ${i}`,
+    }))
+    const payload = { version: 1, records: [{ ...sampleRecord, icon: 'X' }], users }
+    const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(payload))))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '')
+
+    const result = parseImportUrl(`https://example.com/import?data=${encoded}`)
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toContain('Too many users')
+    }
+  })
 })
 
 describe('parseFileContent', () => {
@@ -325,6 +344,26 @@ describe('parseFileContent', () => {
     expect(result.success).toBe(false)
     if (!result.success) {
       expect(result.error).toContain('paidBy[0]')
+    }
+  })
+
+  it('should reject file payloads with too many users', () => {
+    const users = Array.from({ length: 10001 }, (_, i) => ({
+      email: `user${i}@example.com`,
+      alias: `User ${i}`,
+    }))
+    const fileContent = JSON.stringify({
+      version: 1,
+      exportedAt: Date.now(),
+      records: [sampleRecord],
+      users,
+    })
+
+    const result = parseFileContent(fileContent)
+
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      expect(result.error).toContain('Too many users')
     }
   })
 })

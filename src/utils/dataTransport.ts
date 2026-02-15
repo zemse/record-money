@@ -21,6 +21,9 @@ const MAX_URL_LENGTH = 2000
 // Max records allowed in a single import to prevent storage DoS
 const MAX_IMPORT_RECORDS = 10000
 
+// Max users allowed in a single import to prevent storage DoS
+const MAX_IMPORT_USERS = 10000
+
 const ALLOWED_IMPORT_CURRENCIES = new Set([
   'INR',
   'USD',
@@ -108,6 +111,9 @@ function validateRecordsAndUsers(
 ): string | null {
   if (records.length > MAX_IMPORT_RECORDS) {
     return `Too many records (${records.length}). Maximum allowed is ${MAX_IMPORT_RECORDS}.`
+  }
+  if (users.length > MAX_IMPORT_USERS) {
+    return `Too many users (${users.length}). Maximum allowed is ${MAX_IMPORT_USERS}.`
   }
 
   for (let i = 0; i < records.length; i++) {
